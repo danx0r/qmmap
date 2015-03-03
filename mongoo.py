@@ -74,10 +74,10 @@ if __name__ == "__main__":
 #     mongoo ("parsed", goosrc_cb, flaggy=1)
 #     print "DEBUG C"
 
-    db=meng.connect("local_db", alias="default", host="127.0.0.1", port=27017)
+    db=meng.connect("local_db", host="127.0.0.1", port=27017)
 #     print parsed.objects.count(), db
-    db2=meng.connect("dev_testdb", alias="dbtoo", host="127.0.0.1", port=8501, username="tester", password=config.password)
+    db2=meng.connect("dev_testdb", alias="dev_testdb", host="127.0.0.1", port=8501, username="tester", password=config.password)
 #     print parsed.objects.count(), db2
-    switch_db(li_profiles, "dbtoo").__enter__()     #this is fine if we're never switching back
+    switch_db(li_profiles, "dev_testdb").__enter__()     #this is fine if we're never switching back
     print parsed.objects.count()
     print li_profiles.objects.count()
