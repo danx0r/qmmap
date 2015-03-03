@@ -1,49 +1,36 @@
 #
 # mongo Operations
 #
-import sys
+import sys, os
 from datetime import datetime
+from urlparse import urlparse
 import mongoengine as meng
 from mongoengine.connection import get_db
 from mongoengine import register_connection
 from mongoengine.context_managers import switch_db
+import config
 
-#
-# user:passwd@hostipaddr:port/database/collection
-#
-def parse_concol(s):
-    ret = {}
-    if '@' in s:
-        up, s = s.split('@')
-        ret['user'], ret['password']  = up.split(':')
-    else:
-        ret['user'], ret['password']  = None, None
-    if ':' in s:
-        ret['host'], s = s.split(':')
-    else:
-        ret['host'] = "localhost"
-    temp = s.split('/')
-    if len(temp) == 3:
-        ret['port'] = int(temp[0])
-        ret['database'] = temp[1]
-        ret['collection'] = temp[2] 
-    elif len(temp) == 2:
-        ret['port'] = 27017
-        ret['database'] = temp[0]
-        ret['collection'] = temp[1] 
-    elif len(temp) == 1:
-        ret['port'] = 27017
-        ret['database'] = "local_db"
-        ret['collection'] = temp[0] 
-    else:
-        raise Exception("parse_concol format: [user:passwd@][hostipaddr][:port]]/database/collection")
-    return ret
+def connect2db(col, uri):
+    parts = urlparse(uri)
+    print parts
+    db = os.path.basename(parts[2])
+    alias = col._class_name + "_"+ db
+    print alias
+    meng.connect(db, alias=alias, host=uri)
+    switch_db(col, alias).__enter__()
 
-def open_concol(cc):
-    cc = parse_concol(cc)
-#     print "DEBUG cc:", cc
-    meng.connect(cc['database'], host=cc['host'], port=cc['port'], username=cc['user'], password=cc['password'])
-    return globals()[ cc['collection'] ]
+class parsed(meng.Document):
+    pass
+class li_profiles(meng.Document):
+    pass
+
+meng.connect("__neverMIND__", host="127.0.0.1", port=27017)
+connect2db(parsed, "mongodb://tester:%s@127.0.0.1:8501/dev_testdb" % config.password)
+connect2db(li_profiles, "mongodb://127.0.0.1/local_db")
+print parsed.objects.count()
+print li_profiles.objects.count()
+exit()
+
 #
 # mongoo(concol1, [concol2, ...] cb, [qarg1=val1, ...])
 # call with source connection/collection, dest concol, callback, args for mongoengine query
