@@ -8,6 +8,9 @@ import mongoengine as meng
 from mongoengine.connection import get_db
 from mongoengine import register_connection
 from mongoengine.context_managers import switch_db
+PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../science") ) 
+sys.path.append(PYBASE)
+from utils.pp import pp
 import config
 
 connect2db_cnt = 0
@@ -32,7 +35,10 @@ def mongoo(cb, srccol, srcdb, destcol, destdb, query, **kw):
     
     #naive implementation -- no partitioning or parallelism:
     cur = srccol.objects(**query) 
-    cb(cur, destcol, **kw)
+    kw['init'] = True                   #first time only for one thread
+    cb(cur.limit(1), destcol, **kw)
+    kw['init'] = False
+    cb(cur[1:], destcol, **kw)
 
 # meng.connect("__neverMIND__", host="127.0.0.1", port=27017)
 
@@ -45,10 +51,22 @@ if __name__ == "__main__":
     class goodest(meng.Document):
         numnum = meng.StringField()
 
-    goosrc
+    connect2db(goosrc, "mongodb://127.0.0.1/local_db")
 
-    def goosrc_cb(src, dest, **kw):
-        print "goosrc_cb:", src.count(), dest.objects.count(), kw
+    for i in range(3):
+        g = goosrc(num = i)
+        g.save()
+
+    def goosrc_cb(src, dest, init = False, reset = False):
+        print "goosrc_cb:", src.count(), dest.objects.count(), init, reset
+        if init and reset:
+            dest.drop_collection()
+            print "dropped", dest
+        for x in src:
+            print "goosrc_cb process:", x.num
+            d = dest()
+            d.numnum = str(x.num*2)
+            d.save()
 
     mongoo( goosrc_cb, 
             goosrc,                                                             #source collection
@@ -59,3 +77,6 @@ if __name__ == "__main__":
             {"num__gte": 1},                                                    #query params for source (mongoengine)
             reset = True                                                        #extra parameters for callback
         )
+
+    print "goodest:"
+    pp(goodest.objects)
