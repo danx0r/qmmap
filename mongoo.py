@@ -10,12 +10,19 @@ from mongoengine import register_connection
 from mongoengine.context_managers import switch_db
 import config
 
+connect2db_cnt = 0
+
 def connect2db(col, uri):
+    global connect2db_cnt
     parts = urlparse(uri)
     db = os.path.basename(parts[2])
-    alias = col._class_name + "_"+ db
-    meng.connect(db, alias=alias, host=uri)
-    switch_db(col, alias).__enter__()
+    if connect2db_cnt:
+        alias = col._class_name + "_"+ db
+        meng.connect(db, alias=alias, host=uri)
+        switch_db(col, alias).__enter__()
+    else:
+        meng.connect(db, host=uri)
+    connect2db_cnt += 1
 
 def mongoo(cb, srccol, srcdb, *args, **kw):
     connect2db(srccol, srcdb)
@@ -24,7 +31,7 @@ def mongoo(cb, srccol, srcdb, *args, **kw):
     cur = srccol.objects(**kw) 
     cb(cur, *args)
 
-meng.connect("__neverMIND__", host="127.0.0.1", port=27017)
+# meng.connect("__neverMIND__", host="127.0.0.1", port=27017)
 
 if __name__ == "__main__":
     import config
