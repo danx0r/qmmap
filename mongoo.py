@@ -4,42 +4,63 @@
 import sys, os
 from datetime import datetime
 from urlparse import urlparse
+import pymongo
 import mongoengine as meng
 from mongoengine.connection import get_db
 from mongoengine import register_connection
 from mongoengine.context_managers import switch_db
+from mongoengine.context_managers import switch_collection
 PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../science") ) 
 sys.path.append(PYBASE)
 from utils.pp import pp
 import config
+CHUNK = 5
+
+# class housekeep(meng.Document):
+#     pass
 
 connect2db_cnt = 0
 
 def connect2db(col, uri):
-    global connect2db_cnt
+    global connect2db_cnt, con
     parts = urlparse(uri)
     db = os.path.basename(parts[2])
     if connect2db_cnt:
         alias = col._class_name + "_"+ db
-        meng.connect(db, alias=alias, host=uri)
+        con = meng.connect(db, alias=alias, host=uri)
         switch_db(col, alias).__enter__()
     else:
-        meng.connect(db, host=uri)
+        con = meng.connect(db, host=uri)
     connect2db_cnt += 1
+    return con
 
-def mongoo(cb, srccol, srcdb, destcol, destdb, query, **kw):
+def mongoo(cb, key, srccol, srcdb, destcol, destdb, query, **kw):
     if srccol == destcol:
         raise Exception("Source and destination must be different collections")
     connect2db(srccol, srcdb)
-    connect2db(destcol, destdb)
-    
+    db = connect2db(destcol, destdb).get_default_database()
+    print "housekeeping db:", db
+
+    """    
     #naive implementation -- no partitioning or parallelism:
     cur = srccol.objects(**query) 
     kw['init'] = True                   #first time only for one thread
     cb(cur.limit(5), destcol, **kw)
     kw['init'] = False
     cb(cur[5:], destcol, **kw)
-
+    """
+    
+    #chunk it:
+    q = srccol.objects(**query).only(key).order_by(key)
+    tot = q.count()
+    keys = [x.num for x in q]
+    for i in range(0, tot, CHUNK):
+        query[key + "__gte"] = keys[i]
+        query[key + "__lte"] = keys[min(i+CHUNK-1, len(keys)-1)]
+        q = srccol.objects(**query)
+        kw['init'] = True if i==0 else False
+        cb(q, destcol, **kw)    
+    
 # meng.connect("__neverMIND__", host="127.0.0.1", port=27017)
 
 if __name__ == "__main__":
@@ -52,18 +73,19 @@ if __name__ == "__main__":
         numnum = meng.StringField()
 
     connect2db(goosrc, "mongodb://127.0.0.1/local_db")
+    goosrc.drop_collection()
 
-    for i in range(20):
+    for i in range(0, 50, 3):
         g = goosrc(num = i)
         g.save()
 
     def goosrc_cb(src, dest, init = False, reset = False):
-        print "goosrc_cb:", src.count(), dest.objects.count(), init, reset
+        print "goosrc_cb: source count:", src.count(), "init:", init, "reset:", reset
         if init and reset:
             dest.drop_collection()
             print "init: dropped", dest
         for x in src:
-            if x.num != 5:
+            if x.num != 15:
                 print "goosrc_cb process:", x.num
                 d = dest()
                 d.numnum = str(x.num*2)
@@ -71,7 +93,8 @@ if __name__ == "__main__":
             else:
                 print "goosrc_cb: skipping", x.num
 
-    mongoo( goosrc_cb, 
+    mongoo( goosrc_cb,
+            'num',                                                              #key field for partitioning 
             goosrc,                                                             #source collection
             "mongodb://127.0.0.1/local_db",                                     #source host/database
             goodest,                                                            #destination collection
