@@ -36,9 +36,9 @@ def mongoo(cb, srccol, srcdb, destcol, destdb, query, **kw):
     #naive implementation -- no partitioning or parallelism:
     cur = srccol.objects(**query) 
     kw['init'] = True                   #first time only for one thread
-    cb(cur.limit(1), destcol, **kw)
+    cb(cur.limit(5), destcol, **kw)
     kw['init'] = False
-    cb(cur[1:], destcol, **kw)
+    cb(cur[5:], destcol, **kw)
 
 # meng.connect("__neverMIND__", host="127.0.0.1", port=27017)
 
@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     connect2db(goosrc, "mongodb://127.0.0.1/local_db")
 
-    for i in range(3):
+    for i in range(20):
         g = goosrc(num = i)
         g.save()
 
@@ -61,12 +61,15 @@ if __name__ == "__main__":
         print "goosrc_cb:", src.count(), dest.objects.count(), init, reset
         if init and reset:
             dest.drop_collection()
-            print "dropped", dest
+            print "init: dropped", dest
         for x in src:
-            print "goosrc_cb process:", x.num
-            d = dest()
-            d.numnum = str(x.num*2)
-            d.save()
+            if x.num != 5:
+                print "goosrc_cb process:", x.num
+                d = dest()
+                d.numnum = str(x.num*2)
+                d.save()
+            else:
+                print "goosrc_cb: skipping", x.num
 
     mongoo( goosrc_cb, 
             goosrc,                                                             #source collection
@@ -74,9 +77,9 @@ if __name__ == "__main__":
             goodest,                                                            #destination collection
 #             "mongodb://tester:%s@127.0.0.1:8501/dev_testdb" % config.password,  #destination host/database
             "mongodb://127.0.0.1/local_db",
-            {"num__gte": 1},                                                    #query params for source (mongoengine)
+            {"num__ne": 3},                                                    #query params for source (mongoengine)
             reset = True                                                        #extra parameters for callback
         )
 
     print "goodest:"
-    pp(goodest.objects)
+    pp(goodest.objects.limit(10))
