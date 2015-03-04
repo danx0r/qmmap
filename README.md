@@ -3,32 +3,10 @@ mongoo
 
 goo to bind mongodb to CPU power
 
+mongoo(cb, srccol, srcdb, arg1, arg2..., key=val, key2=val2)
 
+iterates over srcdb/srccol using keyword args as query
+makes concurrent & sequential calls to cb with cursor set to ranges of srcdb/srccol
+calls cb(cursor, arg1, arg2...)	where cursor = src.objects(key=val, key2=val2)
 
-Processing upgrade
-
-mongoo: FOSS?
-
-source-connection/collection, query, args
-
-start w con/col list (*args) -- source is first
-use **kw for query
-
-mongoo(
-    user:passwd@hostipaddr:port/rawdata/raw_scrapes, 
-	user:passwd@host:port/dev_stage/parsed, 
-	scrapus2, 
-	invalid=False, 
-	timestamp__gte=before, 
-	extra=123)
-
-calls raw_scrape.process(scrapus2, extra)
-
-def process(self, dest, ex):
-    self #instance of raw_scrapes
-    dest #parsed con/col
-    ex #whatever, dict of flags etc
-
-shell:
-
-mongoo.py -c 'mongo(user:passwd@hostipaddr:port/raw_scrapes user:passwd@host:port/parsed, user:passwd@host:port/scrapus2,invalid=False timestamp__gte=before, extra=123)'
+arg1, arg2 may be additional collections (connected to specific host/db combos)
