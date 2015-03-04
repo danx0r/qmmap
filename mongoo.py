@@ -2,6 +2,7 @@
 # mongo Operations
 #
 import sys, os
+from enum import Enum
 from datetime import datetime
 from urlparse import urlparse
 import pymongo
@@ -10,14 +11,23 @@ from mongoengine.connection import get_db
 from mongoengine import register_connection
 from mongoengine.context_managers import switch_db
 from mongoengine.context_managers import switch_collection
+from extras_mongoengine.fields import StringEnumField
+
 PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../science") ) 
 sys.path.append(PYBASE)
 from utils.pp import pp
 import config
 CHUNK = 5
 
-# class housekeep(meng.Document):
-#     pass
+class hkstate(Enum):
+    never = 'never'
+    working = 'working'
+    done = 'done'
+
+class housekeep(meng.Document):
+    start = meng.DynamicField()
+    end = meng.DynamicField()
+    state = StringEnumField(hkstate, default = 'never')
 
 connect2db_cnt = 0
 
