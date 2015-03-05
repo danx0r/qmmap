@@ -7,3 +7,6 @@ housekeeping:
 
 dest db used
 collection = sourceclassname_destclassname
+
+command line:
+
