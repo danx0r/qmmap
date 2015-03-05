@@ -1,7 +1,7 @@
 #
 # mongo Operations
 #
-import sys, os
+import sys, os, time
 from enum import Enum
 # from datetime import datetime
 from urlparse import urlparse
@@ -13,6 +13,10 @@ from mongoengine.context_managers import switch_collection
 from extras_mongoengine.fields import StringEnumField
 
 CHUNK = 5
+WAITSLEEP = 1.5
+
+PID = os.getpid()
+print "pid:", PID
 
 class hkstate(Enum):
     never = 'never'
@@ -22,6 +26,7 @@ class hkstate(Enum):
 class housekeep(meng.Document):
     start = meng.DynamicField()
     end = meng.DynamicField()
+    pid = meng.IntField()
     state = StringEnumField(hkstate, default = 'never')
 
 connect2db_cnt = 0
@@ -39,31 +44,62 @@ def connect2db(col, uri):
     connect2db_cnt += 1
     return con
 
+def mongoo_reset(srccol, destcol, destdb):
+    hk_colname = srccol._class_name + '_' + destcol._class_name
+    print "dropping", hk_colname
+    connect2db(housekeep, destdb)
+    switch_collection(housekeep, hk_colname).__enter__()
+    housekeep.drop_collection()
+
 def mongoo(cb, key, srccol, srcdb, destcol, destdb, query, **kw):
     if srccol == destcol:
         raise Exception("Source and destination must be different collections")
     connect2db(srccol, srcdb)
     connect2db(destcol, destdb)
     connect2db(housekeep, destdb)
-    switch_collection(housekeep, srccol._class_name + '_' + destcol._class_name).__enter__()
-    housekeep.drop_collection()
+    hk_colname = srccol._class_name + '_' + destcol._class_name
+    switch_collection(housekeep, hk_colname).__enter__()
+    init = False
+    #
+    # set up housekeeping if needed
+    #
+    if housekeep.objects.count() == 0:
+        print "initializing housekeeping for", hk_colname
+        q = srccol.objects(**query).only(key).order_by(key)
+        tot = q.count()
+        keys = [x.num for x in q]
+        for i in range(0, tot, CHUNK):
+            hk = housekeep()
+            hk.start = keys[i]
+            hk.end = keys[min(i+CHUNK-1, len(keys)-1)]
+            hk.save()
+        init = True
+    else:
+        print "skipping initialization, processing"
+    #
+    # Process what we can
+    #
+    while housekeep.objects(state = 'never').count():
+        hko = housekeep.objects(state = 'never')[0]
+        hko.state = 'working'
+        hko.pid = PID
+        hko.save()
+        
+        #reload and check if we still own it (avoid race condition)
+        hko = housekeep.objects(id = hko.id)[0]
+        if hko.pid != PID:
+            print "race condition -- waiting, will try later"
+            time.sleep(WAITSLEEP)
+            continue
 
-    q = srccol.objects(**query).only(key).order_by(key)
-    tot = q.count()
-    keys = [x.num for x in q]
-    init = True
-    for i in range(0, tot, CHUNK):
-        hk = housekeep()
-        hk.start = keys[i]
-        hk.end = keys[min(i+CHUNK-1, len(keys)-1)]
-        hk.save()
-        while housekeep.objects(state = 'never').count():
-            hko = housekeep.objects(state = 'never')[0]
-            query[key + "__gte"] = hko.start
-            query[key + "__lte"] = hko.end
-            q = srccol.objects(**query)
-            kw['init'] = init
-            init = False
-            cb(q, destcol, **kw)
-            hko.state = 'done'
-            hko.save()
+        #do stuff            
+        query[key + "__gte"] = hko.start
+        query[key + "__lte"] = hko.end
+        q = srccol.objects(**query)
+        kw['init'] = init
+        init = False
+        cb(q, destcol, **kw)
+        hko.state = 'done'
+        hko.save()
+        print "sleeping"
+        time.sleep(WAITSLEEP)

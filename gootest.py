@@ -3,7 +3,7 @@
 #
 import sys, os
 import mongoengine as meng
-from mongoo import mongoo, connect2db
+from mongoo import mongoo, mongoo_reset, connect2db
 
 PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../science") ) 
 sys.path.append(PYBASE)
@@ -18,6 +18,11 @@ class goodest(meng.Document):
 
 connect2db(goosrc, "mongodb://127.0.0.1/local_db")
 goosrc.drop_collection()
+connect2db(goodest, "mongodb://127.0.0.1/local_db")
+goodest.drop_collection()
+print "delete goosrc_goodest?"
+if raw_input()[:1] == 'y':
+    mongoo_reset(goosrc, goodest, "mongodb://127.0.0.1/local_db")
 
 for i in range(0, 50, 3):
     g = goosrc(num = i)
