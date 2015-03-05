@@ -48,8 +48,10 @@ def mongoo(cb, key, srccol, srcdb, destcol, destdb, query, **kw):
     if srccol == destcol:
         raise Exception("Source and destination must be different collections")
     connect2db(srccol, srcdb)
-    db = connect2db(destcol, destdb).get_default_database()
-    print "housekeeping db:", db
+    connect2db(destcol, destdb)
+    connect2db(housekeep, destdb)
+    switch_collection(housekeep, srccol._class_name + '_' + destcol._class_name).__enter__()
+    housekeep.drop_collection()
 
     """    
     #naive implementation -- no partitioning or parallelism:
@@ -64,12 +66,22 @@ def mongoo(cb, key, srccol, srcdb, destcol, destdb, query, **kw):
     q = srccol.objects(**query).only(key).order_by(key)
     tot = q.count()
     keys = [x.num for x in q]
+    init = True
     for i in range(0, tot, CHUNK):
-        query[key + "__gte"] = keys[i]
-        query[key + "__lte"] = keys[min(i+CHUNK-1, len(keys)-1)]
-        q = srccol.objects(**query)
-        kw['init'] = True if i==0 else False
-        cb(q, destcol, **kw)    
+        hk = housekeep()
+        hk.start = keys[i]
+        hk.end = keys[min(i+CHUNK-1, len(keys)-1)]
+        hk.save()
+        while housekeep.objects(state = 'never').count():
+            hko = housekeep.objects(state = 'never')[0]
+            query[key + "__gte"] = hko.start
+            query[key + "__lte"] = hko.end
+            q = srccol.objects(**query)
+            kw['init'] = init
+            init = False
+            cb(q, destcol, **kw)
+            hko.state = 'done'
+            hko.save()
     
 # meng.connect("__neverMIND__", host="127.0.0.1", port=27017)
 
@@ -115,4 +127,4 @@ if __name__ == "__main__":
         )
 
     print "goodest:"
-    pp(goodest.objects.limit(10))
+    pp(goodest.objects)
