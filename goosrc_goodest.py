@@ -49,3 +49,4 @@ def process(source, dest):
             d.save()
         else:
             print "    goosrc_goodest: skipping", x.num
+    sys.stdout.flush()

@@ -27,12 +27,14 @@ MYID = "%s-%s" % (os.getpid(), time.time())
 class hkstate(Enum):
     open = 'open'
     working = 'working'
+    fail = 'fail'
     done = 'done'
 
 class housekeep(meng.Document):
     start = meng.DynamicField(primary_key = True)
     end = meng.DynamicField()
     state = StringEnumField(hkstate, default = 'open')
+    meta = {'indexes': ['state']}
 
 connect2db_cnt = 0
 
@@ -106,6 +108,7 @@ def mongoo_process(srccol, destcol, key, query, cb):
         else:
             print "race lost -- skipping"
         print "sleep..."
+        sys.stdout.flush()
         time.sleep(WAITSLEEP)
     print "mongo_process over"
 
