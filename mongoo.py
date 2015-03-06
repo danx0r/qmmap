@@ -15,10 +15,14 @@ import config
 from pkg_resources import importlib_bootstrap
 from cups import Dest
 
-CHUNK = 3
-WAITSLEEP = 4
-
-PID = os.getpid()               #FIXME: not guaranteed unique across machines!
+if config.test:
+    CHUNK = 3
+    WAITSLEEP = 1
+else:
+    CHUNK = config.chunk
+    WAITSLEEP = config.waitsleep
+    
+MYID = "%s-%s" % (os.getpid(), time.time())
 
 class hkstate(Enum):
     open = 'open'
@@ -87,7 +91,7 @@ def mongoo_process(srccol, destcol, key, query, cb):
         #
         # update housekeep.state with find and modify
         raw = pmhk.find_and_modify({'state': 'open'}, {'$set': {'state': 'working'}})
-        #if raw==None, we lost the race with another process, so duck out for now
+        #if raw==None, someone scooped us
         if raw != None:
             #reload as mongoengine object -- _id is .start (because set as primary_key)
             hko = housekeep.objects(start = raw['_id'])[0]
@@ -95,7 +99,7 @@ def mongoo_process(srccol, destcol, key, query, cb):
             query[key + "__gte"] = hko.start
             query[key + "__lte"] = hko.end
             cursor = srccol.objects(**query)
-            print "mongo_process: %d elements in chunk %s" % (cursor.count(), hko.start)
+            print "mongo_process: %d elements in chunk %s-%s" % (cursor.count(), hko.start, hko.end)
             cb(cursor, destcol)
             hko.state = 'done'
             hko.save()
@@ -103,11 +107,12 @@ def mongoo_process(srccol, destcol, key, query, cb):
             print "race lost -- skipping"
         print "sleep..."
         time.sleep(WAITSLEEP)
+    print "mongo_process over"
 
 if __name__ == "__main__":
     if config.source == config.dest:
         raise Exception("Source and destination must be different collections")
-    print "pid:", PID
+    print "MYID:", MYID
     src_dest = config.source + "_" + config.dest
     goo = importlib.import_module(src_dest)
     source = getattr(goo, config.source)
