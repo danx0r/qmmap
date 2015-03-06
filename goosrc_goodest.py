@@ -20,7 +20,7 @@ KEY = 'num'
 #
 # optional query:
 #
-# QUERY = {'num__gt': 3}
+QUERY = {'num__ne': 9}
 
 #
 # called on initialization of processing (incremental)
