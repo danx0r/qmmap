@@ -11,9 +11,10 @@ import mongoengine as meng
 from mongoengine.context_managers import switch_db
 from mongoengine.context_managers import switch_collection
 from extras_mongoengine.fields import StringEnumField
+PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../science") ) 
+sys.path.append(PYBASE)
+from utils.pp import pp
 import config
-from pkg_resources import importlib_bootstrap
-from cups import Dest
 
 if config.test:
     CHUNK = 3
@@ -147,3 +148,7 @@ if __name__ == "__main__":
         
     elif 'process' in sys.argv[1:]:
         mongoo_process(source, dest, goo.KEY, query, goo.process)
+
+    elif 'track' in sys.argv[1:]:
+        print "%s done, %s not" % (housekeep.objects(state = 'done').count(), housekeep.objects(state__ne = 'done').count())
+        pp(housekeep.objects)
