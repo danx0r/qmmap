@@ -15,21 +15,20 @@ import config
 from pkg_resources import importlib_bootstrap
 from cups import Dest
 
-CHUNK = 5
-WAITSLEEP = 1.5
+CHUNK = 3
+WAITSLEEP = 4
 
 PID = os.getpid()               #FIXME: not guaranteed unique across machines!
 
 class hkstate(Enum):
-    never = 'never'
+    open = 'open'
     working = 'working'
     done = 'done'
 
 class housekeep(meng.Document):
     start = meng.DynamicField(primary_key = True)
     end = meng.DynamicField()
-    pid = meng.IntField()
-    state = StringEnumField(hkstate, default = 'never')
+    state = StringEnumField(hkstate, default = 'open')
 
 connect2db_cnt = 0
 
@@ -39,6 +38,7 @@ def connect2db(col, uri):
     db = os.path.basename(parts[2])
     if connect2db_cnt:
         alias = col._class_name + "_"+ db
+#         print "DBG alias:", alias
         con = meng.connect(db, alias=alias, host=uri)
         switch_db(col, alias).__enter__()
     else:
@@ -76,27 +76,32 @@ def mongoo_init(srccol, destcol, key, query):
 # Process what we can
 #
 def mongoo_process(srccol, destcol, key, query, cb):
-    while housekeep.objects(state = 'never').count():
-        hko = housekeep.objects(state = 'never')[0]
-        hko.state = 'working'
-        hko.pid = PID
-        hko.save()
-        
-        #reload and check if we still own it (avoid race condition)
-        hko = housekeep.objects(start = hko.start)[0]
-        if hko.pid != PID:
-            print "race condition -- waiting, will try later"
-            time.sleep(WAITSLEEP)
-            continue
-
-        #do stuff            
-        query[key + "__gte"] = hko.start
-        query[key + "__lte"] = hko.end
-        q = srccol.objects(**query)
-        cb(q, destcol)
-        hko.state = 'done'
-        hko.save()
-        print "sleeping"
+    # get pymongo collection for dest/housekeep
+    db = meng.connection.get_db(destcol._class_name+"_"+destcol.objects._collection.database.name)
+    pmhk = db[srccol._class_name+"_"+destcol._class_name]
+    while housekeep.objects(state = 'open').count():
+        #
+        # tricky pymongo stuff mongoengine doesn't support.
+        # find an open chunk, update it to state=working
+        # must be done atomically to avoid contention with other processes
+        #
+        # update housekeep.state with find and modify
+        raw = pmhk.find_and_modify({'state': 'open'}, {'$set': {'state': 'working'}})
+        #if raw==None, we lost the race with another process, so duck out for now
+        if raw != None:
+            #reload as mongoengine object -- _id is .start (because set as primary_key)
+            hko = housekeep.objects(start = raw['_id'])[0]
+            #get data pointed to by housekeep
+            query[key + "__gte"] = hko.start
+            query[key + "__lte"] = hko.end
+            cursor = srccol.objects(**query)
+            print "mongo_process: %d elements in chunk %s" % (cursor.count(), hko.start)
+            cb(cursor, destcol)
+            hko.state = 'done'
+            hko.save()
+        else:
+            print "race lost -- skipping"
+        print "sleep..."
         time.sleep(WAITSLEEP)
 
 if __name__ == "__main__":
