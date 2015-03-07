@@ -49,5 +49,5 @@ def process(source, dest):
             d.save()
         else:
             print "    goosrc_goodest: skipping", x.num
-            raise Exception("spurious exception")
+#             raise Exception("spurious exception")
     sys.stdout.flush()

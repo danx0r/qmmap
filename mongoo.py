@@ -83,9 +83,6 @@ def mongoo_init(srccol, destcol, key, query):
 # Process what we can
 #
 def mongoo_process(srccol, destcol, key, query, cb):
-    # get pymongo collection for dest/housekeep
-    db = meng.connection.get_db(destcol._class_name+"_"+destcol.objects._collection.database.name)
-    pmhk = db[srccol._class_name+"_"+destcol._class_name]
     while housekeep.objects(state = 'open').count():
         #
         # tricky pymongo stuff mongoengine doesn't support.
@@ -93,7 +90,7 @@ def mongoo_process(srccol, destcol, key, query, cb):
         # must be done atomically to avoid contention with other processes
         #
         # update housekeep.state with find and modify
-        raw = pmhk.find_and_modify({'state': 'open'}, {'$set': {'state': 'working'}})
+        raw = housekeep._collection.find_and_modify({'state': 'open'}, {'$set': {'state': 'working'}})
         #if raw==None, someone scooped us
         if raw != None:
             #reload as mongoengine object -- _id is .start (because set as primary_key)
