@@ -1,7 +1,7 @@
 #
 # mongo Operations
 #
-import sys, os, time, importlib
+import sys, os, time, datetime, importlib
 from enum import Enum
 # from datetime import datetime
 from urlparse import urlparse
@@ -99,7 +99,7 @@ def mongoo_process(srccol, destcol, key, query, cb):
             query[key + "__gte"] = hko.start
             query[key + "__lte"] = hko.end
             cursor = srccol.objects(**query)
-            print "mongo_process: %d elements in chunk %s-%s" % (cursor.count(), hko.start, hko.end)
+            print "%s mongo_process: %d elements in chunk %s-%s" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), cursor.count(), hko.start, hko.end)
             cb(cursor, destcol)
             hko.state = 'done'
             hko.save()

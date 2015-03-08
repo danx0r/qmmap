@@ -1,4 +1,4 @@
-import sys, os, time
+import sys, os, time, traceback
 import mongoengine as meng
 # PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../science") ) 
 # sys.path.append(PYBASE)
@@ -42,12 +42,19 @@ QUERY = {'num__ne': 9}
 def process(source, dest):
     print "  process %d from" % source.count(), source._collection, "to", dest.objects._collection
     for x in source:
-        if x.num != 15:
-            print "    goosrc_goodest.process:", x.num
-            d = dest()
-            d.numnum = str(x.num*2)
-            d.save()
-        else:
-            print "    goosrc_goodest: skipping", x.num
-#             raise Exception("spurious exception")
-    sys.stdout.flush()
+        try:
+            if x.num != 15:
+                print "    goosrc_goodest.process:", x.num
+                sys.stdout.flush()
+                d = dest()
+                d.numnum = str(x.num*2)
+                d.save()
+            else:
+                print "    goosrc_goodest: skipping", x.num
+                sys.stdout.flush()
+                raise Exception("spurious exception")
+        except:
+            print "------------ERROR--------------"
+            print traceback.format_exc()
+            print "-------------------------------"
+            sys.stdout.flush()
