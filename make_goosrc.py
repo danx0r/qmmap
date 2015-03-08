@@ -12,7 +12,7 @@ connect2db(goosrc, config.src_db)
 if raw_input("drop goosrc?")[:1] == 'y':
     goosrc.drop_collection()
 
-for i in range(0, 50, 3):
+for i in range(0, int(sys.argv[1]), 3):
     g = goosrc(num = i)
     g.save()
 

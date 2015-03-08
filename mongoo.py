@@ -11,6 +11,7 @@ import mongoengine as meng
 from mongoengine.context_managers import switch_db
 from mongoengine.context_managers import switch_collection
 from extras_mongoengine.fields import StringEnumField
+from django.template.defaultfilters import last
 PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../science") ) 
 sys.path.append(PYBASE)
 from utils.pp import pp
@@ -68,16 +69,20 @@ def mongoo_init(srccol, destcol, key, query):
     if housekeep.objects.count() == 0:
         print "initializing housekeeping for", housekeep._get_collection_name()
         q = srccol.objects(**query).only(key).order_by(key)
-        tot = q.count()
-        keys = [x.num for x in q]                   #FIXME -- in memory!
-        for i in range(0, tot, CHUNK):
-            hk = housekeep()
-            hk.start = keys[i]
-            hk.end = keys[min(i+CHUNK-1, len(keys)-1)]
-            hk.save()
-        init = True
     else:
-        raise Exception("TODO: incremental init")
+        last = housekeep.objects().order_by('-start')[0].end
+        print "last partition field in housekeep:", last
+        query[key + "__gt"] = last
+        q = srccol.objects(**query).only(key).order_by(key)
+        print "added %d entries to %s" % (q.count(), housekeep._get_collection_name())
+    tot = q.count()
+    keys = [x.num for x in q]                   #FIXME -- in memory!
+    for i in range(0, tot, CHUNK):
+        hk = housekeep()
+        hk.start = keys[i]
+        hk.end = keys[min(i+CHUNK-1, len(keys)-1)]
+        hk.save()
+    init = True
 
 #
 # Process what we can
