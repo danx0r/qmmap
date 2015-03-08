@@ -151,7 +151,6 @@ if __name__ == "__main__":
         pp(housekeep.objects)
         
     elif 'dev' in sys.argv[1:]:
-        CHUNK = source.objects.count()
         WAITSLEEP = 0
         print "drop housekeep(%s) and %s at %s, sure?" % (hk_colname, config.dest, config.dest_db)
         if raw_input()[:1] == 'y':
