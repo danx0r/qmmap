@@ -149,3 +149,22 @@ if __name__ == "__main__":
     elif 'track' in sys.argv[1:]:
         print "%s done, %s not" % (housekeep.objects(state = 'done').count(), housekeep.objects(state__ne = 'done').count())
         pp(housekeep.objects)
+        
+    elif 'dev' in sys.argv[1:]:
+        CHUNK = source.objects.count()
+        WAITSLEEP = 0
+        print "drop housekeep(%s) and %s at %s, sure?" % (hk_colname, config.dest, config.dest_db)
+        if raw_input()[:1] == 'y':
+            mongoo_reset(source, dest)
+            if hasattr(goo, 'reset'):
+                goo.reset(source, dest)
+        mongoo_init(source, dest, goo.KEY, query)
+        mongoo_process(source, dest, goo.KEY, query, goo.process)
+
+    else:
+        print "usage:"
+        print "mongoo.py reset   #erase all destination data for complete reprocessing"
+        print "mongoo.py init    #initialize for processing"
+        print "mongoo.py process #process data"
+        print "mongoo.py dev     #reset, init, process in single thread for development tests"
+

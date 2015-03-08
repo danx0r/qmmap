@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import os
+os.system("rm log1 log2")
 os.system("python mongoo.py reset")
 os.system("python mongoo.py init")
 os.system("python mongoo.py process > log1 2>&1 &")
