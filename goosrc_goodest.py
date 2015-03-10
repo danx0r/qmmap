@@ -1,3 +1,6 @@
+#
+# Template mongoo processing script
+#
 import sys, os, time, traceback
 import mongoengine as meng
 # PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../science") ) 
