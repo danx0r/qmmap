@@ -14,7 +14,11 @@ from extras_mongoengine.fields import StringEnumField
 PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../science") ) 
 sys.path.append(PYBASE)
 from utils.pp import pp
-import config
+
+if len(sys.argv) > 1 and 'config=' in sys.argv[1]:
+    config = importlib.import_module(sys.argv[1][7:])
+else:
+    import config
 
 if config.test:
     CHUNK = 3
@@ -151,6 +155,7 @@ if __name__ == "__main__":
         query = {}
 
     t0()
+        
     if 'reset' in sys.argv[1:]:
         print "drop housekeep(%s) and %s at %s, sure?" % (hk_colname, config.dest, config.dest_db)
         if raw_input()[:1] == 'y':
@@ -164,7 +169,7 @@ if __name__ == "__main__":
     elif 'process' in sys.argv[1:]:
         mongoo_process(source, dest, goo.KEY, query, goo.process)
 
-    elif 'track' in sys.argv[1:]:
+    elif 'status' in sys.argv[1:]:
         print "----------- TRACKING STATUS ------------"
         print "%s done, %s not" % (housekeep.objects(state = 'done').count(), housekeep.objects(state__ne = 'done').count())
         for h in housekeep.objects:
