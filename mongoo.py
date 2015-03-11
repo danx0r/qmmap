@@ -11,7 +11,6 @@ import mongoengine as meng
 from mongoengine.context_managers import switch_db
 from mongoengine.context_managers import switch_collection
 from extras_mongoengine.fields import StringEnumField
-from ubuntu_sso.qt.common import BAD
 PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../science") ) 
 sys.path.append(PYBASE)
 from utils.pp import pp
@@ -25,6 +24,14 @@ else:
     WAITSLEEP = config.waitsleep
     
 MYID = "%s-%s" % (os.getpid(), time.time())
+
+def t0():
+    global T
+    print "---PROFILING---"
+    T = time.time()
+
+def t1():
+    print "---%s seconds---" % (time.time() - T)
 
 class hkstate(Enum):
     open = 'open'
@@ -80,7 +87,7 @@ def mongoo_init(srccol, destcol, key, query):
         q = srccol.objects(**query).only(key).order_by(key)
         print "added %d entries to %s" % (q.count(), housekeep._get_collection_name())
     tot = q.count()
-    keys = [x.num for x in q]                   #FIXME -- in memory!
+    keys = [getattr(x, key) for x in q]                   #FIXME -- in memory!
     for i in range(0, tot, CHUNK):
         hk = housekeep()
         hk.start = keys[i]
@@ -143,6 +150,7 @@ if __name__ == "__main__":
     else:
         query = {}
 
+    t0()
     if 'reset' in sys.argv[1:]:
         print "drop housekeep(%s) and %s at %s, sure?" % (hk_colname, config.dest, config.dest_db)
         if raw_input()[:1] == 'y':
@@ -185,4 +193,6 @@ if __name__ == "__main__":
         print "mongoo.py init    #initialize for processing"
         print "mongoo.py process #process data"
         print "mongoo.py dev     #reset, init, process in single thread for development tests"
-
+        exit()
+        
+    t1()
