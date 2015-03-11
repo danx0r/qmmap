@@ -11,6 +11,7 @@ import mongoengine as meng
 from mongoengine.context_managers import switch_db
 from mongoengine.context_managers import switch_collection
 from extras_mongoengine.fields import StringEnumField
+from ubuntu_sso.qt.common import BAD
 PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../science") ) 
 sys.path.append(PYBASE)
 from utils.pp import pp
@@ -34,6 +35,10 @@ class hkstate(Enum):
 class housekeep(meng.Document):
     start = meng.DynamicField(primary_key = True)
     end = meng.DynamicField()
+    total = meng.IntField()                             # total # of entries to do
+    good = meng.IntField(default = 0)                   # entries successfully processed
+    bad = meng.IntField(default = 0)                    # entries we failed to process to completion
+    log = meng.ListField()                              # log of misery -- each item a failed processing incident
     state = StringEnumField(hkstate, default = 'open')
     meta = {'indexes': ['state']}
 
@@ -104,7 +109,8 @@ def mongoo_process(srccol, destcol, key, query, cb):
             query[key + "__lte"] = hko.end
             cursor = srccol.objects(**query)
             print "%s mongo_process: %d elements in chunk %s-%s" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), cursor.count(), hko.start, hko.end)
-            cb(cursor, destcol)
+            hko.total = cursor.count()
+            hko.good, hko.bad, hko.log = cb(cursor, destcol)
             hko.state = 'done'
             hko.save()
         else:
@@ -151,8 +157,17 @@ if __name__ == "__main__":
         mongoo_process(source, dest, goo.KEY, query, goo.process)
 
     elif 'track' in sys.argv[1:]:
+        print "----------- TRACKING STATUS ------------"
         print "%s done, %s not" % (housekeep.objects(state = 'done').count(), housekeep.objects(state__ne = 'done').count())
-        pp(housekeep.objects)
+        for h in housekeep.objects:
+            if h.total != h.good:
+                print "Some badness found for %s-%s:" % (h.start, h.end)
+                print "%d are good, %d are bad." % (h.good, h.bad)
+                for bad in h.log:
+                    print "----------------------------------------"
+                    print bad
+                    print "----------------------------------------"
+#         pp(housekeep.objects)
         
     elif 'dev' in sys.argv[1:]:
         WAITSLEEP = 0

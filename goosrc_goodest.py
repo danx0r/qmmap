@@ -43,6 +43,8 @@ QUERY = {'num__ne': 9}
 # both are associated with db connections
 #
 def process(source, dest):
+    log = []
+    good = bad = 0
     print "  process %d from" % source.count(), source._collection, "to", dest.objects._collection
     for x in source:
         try:
@@ -56,8 +58,14 @@ def process(source, dest):
                 print "    goosrc_goodest: skipping", x.num
                 sys.stdout.flush()
                 raise Exception("spurious exception")
+            good += 1
         except:
             print "------------ERROR--------------"
-            print traceback.format_exc()
+            bad += 1
+            err = "exception processing %s\n" % x.num
+            err += traceback.format_exc()
+            log.append(err)
+            print err
             print "-------------------------------"
             sys.stdout.flush()
+    return good, bad, log
