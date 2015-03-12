@@ -77,6 +77,7 @@ def mongoo_reset(srccol, destcol):
     housekeep.drop_collection()
     print "dropping destination collection:", destcol
     destcol.drop_collection()
+    time.sleep(1)
 #
 # set up housekeeping
 #
@@ -91,12 +92,14 @@ def mongoo_init(srccol, destcol, key, query):
         q = srccol.objects(**query).only(key).order_by(key)
         print "added %d entries to %s" % (q.count(), housekeep._get_collection_name())
     tot = q.count()
-    keys = [getattr(x, key) for x in q]                   #FIXME -- in memory!
-    for i in range(0, tot, CHUNK):
+
+    while q.count() > 0:
         hk = housekeep()
-        hk.start = keys[i]
-        hk.end = keys[min(i+CHUNK-1, len(keys)-1)]
+        hk.start = getattr(q[0], key)
+        hk.end =  getattr(q[min(CHUNK-1, q.count()-1)], key)
         hk.save()
+        query[key + "__gt"] = hk.end
+        q = srccol.objects(**query).only(key).order_by(key)
     init = True
 
 #
