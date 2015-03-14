@@ -10,7 +10,8 @@ import mongoengine as meng
 # in real-world app, we would import our source and destination collections
 #
 class goosrc(meng.Document):
-    num = meng.IntField(primary_key = True)
+#     num = meng.IntField(primary_key = True)
+    num = meng.IntField()
 
 class goodest(meng.Document):
     numnum = meng.StringField()
