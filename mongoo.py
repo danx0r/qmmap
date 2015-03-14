@@ -11,8 +11,8 @@ import mongoengine as meng
 from mongoengine.context_managers import switch_db
 from mongoengine.context_managers import switch_collection
 from extras_mongoengine.fields import StringEnumField
-PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../science") ) 
-sys.path.append(PYBASE)
+# PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../science") ) 
+# sys.path.append(PYBASE)
 from utils.pp import pp
 
 if len(sys.argv) > 1 and 'config=' in sys.argv[1]:
