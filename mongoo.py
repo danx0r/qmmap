@@ -175,16 +175,22 @@ if __name__ == "__main__":
     elif 'status' in sys.argv[1:]:
         print "----------- TRACKING STATUS ------------"
         print "%s done, %s not" % (housekeep.objects(state = 'done').count(), housekeep.objects(state__ne = 'done').count())
+        bad = 0
+        good = 0
+        tot = 0
         for h in housekeep.objects:
+            bad += h.bad
+            good += h.good
+            tot += h.total
             if h.total != h.good:
                 print "Some badness found for %s-%s:" % (h.start, h.end)
                 print "%d are good, %d are bad." % (h.good, h.bad)
-                for bad in h.log:
+                for badd in h.log:
                     print "----------------------------------------"
-                    print bad
+                    print badd
                     print "----------------------------------------"
 #         pp(housekeep.objects)
-        
+        print "total good: %d bad: %d sum: %d expected total: %d" % (good, bad, good+bad, tot)         
     elif 'dev' in sys.argv[1:]:
         WAITSLEEP = 0
         print "drop housekeep(%s) and %s at %s, sure?" % (hk_colname, config.dest, config.dest_db)
@@ -201,6 +207,7 @@ if __name__ == "__main__":
         print "mongoo.py init    #initialize for processing"
         print "mongoo.py process #process data"
         print "mongoo.py dev     #reset, init, process in single thread for development tests"
+        print "mongoo.py status"
         exit()
         
     t1()
