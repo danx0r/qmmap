@@ -1,3 +1,4 @@
 *.pyc
 config.py
 venv/
+mongoo.egg-info/
