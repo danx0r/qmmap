@@ -1,7 +1,9 @@
 #
 # mongo Operations
 #
-import sys, os, time, datetime, importlib
+# mongoo.py src_db source dest_db dest cmd
+#
+import sys, os, time, datetime, importlib, argparse
 from enum import Enum
 # from datetime import datetime
 from urlparse import urlparse
@@ -128,11 +130,21 @@ def mongoo_process(srccol, destcol, key, query, cb):
     print "mongo_process over"
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and 'config=' in sys.argv[1]:
-        config = importlib.import_module(sys.argv[1][7:])
-    else:
-        import config
-    
+    par = argparse.ArgumentParser(description = "Mongo Operations")
+    par.add_argument("src_db")
+    par.add_argument("source")
+    par.add_argument("dest_db")
+    par.add_argument("dest")
+    par.add_argument("cmd")
+    par.add_argument("--chunk", default = 3)
+    config = par.parse_args()
+#     if len(sys.argv) > 1 and 'config=' in sys.argv[1]:
+#         config = importlib.import_module(sys.argv[1][7:])
+#     else:
+#         import config
+
+    if config.dest_db == '.':
+        config.dest_db = config.src_db    
     if config.source == config.dest:
         raise Exception("Source and destination must be different collections")
     print "MYID:", MYID

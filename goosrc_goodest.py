@@ -70,3 +70,8 @@ def process(source, dest):
             print "-------------------------------"
             sys.stdout.flush()
     return good, bad, log
+
+if __name__ == "__main__":
+    print "test mongoo using imports"
+    import mongoo
+    
