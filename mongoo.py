@@ -12,23 +12,14 @@ from mongoengine.context_managers import switch_db
 from mongoengine.context_managers import switch_collection
 from extras_mongoengine.fields import StringEnumField
 
+print sys.path
 #we need class defs from science (at least for pp)
 # PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../science") )     #science is parallel
 PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../") )        #we are located in science/venv/src
 sys.path.append(PYBASE)
 from utils.pp import pp
 
-if len(sys.argv) > 1 and 'config=' in sys.argv[1]:
-    config = importlib.import_module(sys.argv[1][7:])
-else:
-    import config
-
-if config.test:
-    CHUNK = 3
-    WAITSLEEP = 1
-else:
-    CHUNK = config.chunk
-    WAITSLEEP = config.waitsleep
+WAITSLEEP = 0.1
     
 MYID = "%s-%s" % (os.getpid(), time.time())
 
@@ -84,7 +75,7 @@ def mongoo_reset(srccol, destcol):
 #
 # set up housekeeping
 #
-def mongoo_init(srccol, destcol, key, query):
+def mongoo_init(srccol, destcol, key, query, chunk=3):
     if housekeep.objects.count() == 0:
         print "initializing housekeeping for", housekeep._get_collection_name()
         q = srccol.objects(**query).only(key).order_by(key)
@@ -99,7 +90,7 @@ def mongoo_init(srccol, destcol, key, query):
     while q.count() > 0:
         hk = housekeep()
         hk.start = getattr(q[0], key)
-        hk.end =  getattr(q[min(CHUNK-1, q.count()-1)], key)
+        hk.end =  getattr(q[min(chunk-1, q.count()-1)], key)
         hk.save()
         query[key + "__gt"] = hk.end
         q = srccol.objects(**query).only(key).order_by(key)
@@ -138,6 +129,11 @@ def mongoo_process(srccol, destcol, key, query, cb):
     print "mongo_process over"
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and 'config=' in sys.argv[1]:
+        config = importlib.import_module(sys.argv[1][7:])
+    else:
+        import config
+    
     if config.source == config.dest:
         raise Exception("Source and destination must be different collections")
     print "MYID:", MYID
@@ -170,7 +166,7 @@ if __name__ == "__main__":
                 goo.reset(source, dest)
 
     elif 'init' in sys.argv[1:]:
-        mongoo_init(source, dest, goo.KEY, query)
+        mongoo_init(source, dest, goo.KEY, query, config.chunk)
         
     elif 'process' in sys.argv[1:]:
         mongoo_process(source, dest, goo.KEY, query, goo.process)
