@@ -21,7 +21,7 @@ sys.path.append(PYBASE)
 sys.path.append(os.getcwdu())
 from utils.pp import pp
 
-MYID = "%s-%s" % (os.getpid(), time.time())
+MYID = "%05d-%s" % (os.getpid(), repr(time.time()*1000000)[-8:-2])
 
 def t0():
     global T
