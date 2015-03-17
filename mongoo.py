@@ -21,7 +21,7 @@ sys.path.append(PYBASE)
 sys.path.append(os.getcwdu())
 from utils.pp import pp
 
-MYID = "%s-%s" % (os.getpid(), time.time())
+MYID = "%05d-%s" % (os.getpid(), repr(time.time()*1000000)[-8:-2])
 
 def t0():
     global T
@@ -118,7 +118,7 @@ def mongoo_process(srccol, destcol, key, query, cb):
             cursor = srccol.objects(**query)
             print MYID, "%s mongo_process: %d elements in chunk %s-%s" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), cursor.count(), hko.start, hko.end)
             hko.total = cursor.count()
-            hko.good, hko.bad, hko.log = cb(cursor, destcol)
+            hko.good, hko.bad, hko.log = cb(cursor, destcol, MYID)
             hko.state = 'done'
             hko.save()
         else:
@@ -177,10 +177,12 @@ if __name__ == "__main__":
         if raw_input()[:1] == 'y':
             mongoo_reset(source, dest)
             if hasattr(goo, 'reset'):
-                goo.reset(source, dest)
+                goo.reset(source, dest, MYID)
 
     elif 'init' == config.cmd:
         mongoo_init(source, dest, goo.KEY, query, config.chunk)
+        if hasattr(goo, 'init'):
+            goo.init(source, dest, MYID)
         
     elif 'process' == config.cmd:
         if config.multi > 1:
