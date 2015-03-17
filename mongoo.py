@@ -18,6 +18,7 @@ from extras_mongoengine.fields import StringEnumField
 # PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../science") )     #science is parallel
 PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../") )        #we are located in science/venv/src
 sys.path.append(PYBASE)
+sys.path.append(os.getcwdu())
 from utils.pp import pp
 
 WAITSLEEP = 0.1
@@ -136,7 +137,7 @@ if __name__ == "__main__":
     par.add_argument("dest_db")
     par.add_argument("dest")
     par.add_argument("cmd")
-    par.add_argument("--chunk", default = 3)
+    par.add_argument("--chunk", type=int, default = 3)
     config = par.parse_args()
 #     if len(sys.argv) > 1 and 'config=' in sys.argv[1]:
 #         config = importlib.import_module(sys.argv[1][7:])
