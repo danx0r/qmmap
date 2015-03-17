@@ -138,6 +138,7 @@ if __name__ == "__main__":
     par.add_argument("dest")
     par.add_argument("cmd")
     par.add_argument("--chunk", type=int, default = 3)
+    par.add_argument("--multi", type=int, default = 1)
     config = par.parse_args()
 #     if len(sys.argv) > 1 and 'config=' in sys.argv[1]:
 #         config = importlib.import_module(sys.argv[1][7:])
@@ -170,20 +171,20 @@ if __name__ == "__main__":
 
     t0()
         
-    if 'reset' in sys.argv[1:]:
+    if 'reset' == config.cmd:
         print "drop housekeep(%s) and %s at %s, sure?" % (hk_colname, config.dest, config.dest_db)
         if raw_input()[:1] == 'y':
             mongoo_reset(source, dest)
             if hasattr(goo, 'reset'):
                 goo.reset(source, dest)
 
-    elif 'init' in sys.argv[1:]:
+    elif 'init' == config.cmd:
         mongoo_init(source, dest, goo.KEY, query, config.chunk)
         
-    elif 'process' in sys.argv[1:]:
+    elif 'process' == config.cmd:
         mongoo_process(source, dest, goo.KEY, query, goo.process)
 
-    elif 'status' in sys.argv[1:]:
+    elif 'status' == config.cmd:
         print "----------- TRACKING STATUS ------------"
         print "%s done, %s not" % (housekeep.objects(state = 'done').count(), housekeep.objects(state__ne = 'done').count())
         bad = 0
@@ -202,7 +203,7 @@ if __name__ == "__main__":
                     print "----------------------------------------"
 #         pp(housekeep.objects)
         print "total good: %d bad: %d sum: %d expected total: %d" % (good, bad, good+bad, tot)         
-    elif 'dev' in sys.argv[1:]:
+    elif 'dev' == config.cmd:
         WAITSLEEP = 0
         print "drop housekeep(%s) and %s at %s, sure?" % (hk_colname, config.dest, config.dest_db)
         if raw_input()[:1] == 'y':
