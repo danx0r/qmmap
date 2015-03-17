@@ -21,17 +21,15 @@ sys.path.append(PYBASE)
 sys.path.append(os.getcwdu())
 from utils.pp import pp
 
-WAITSLEEP = 0.1
-    
 MYID = "%s-%s" % (os.getpid(), time.time())
 
 def t0():
     global T
-    print "---PROFILING---"
+    print MYID, "---PROFILING---"
     T = time.time()
 
 def t1():
-    print "---%s seconds---" % (time.time() - T)
+    print MYID, "---%s seconds---" % (time.time() - T)
 
 class hkstate(Enum):
     open = 'open'
@@ -69,9 +67,9 @@ def connect2db(col, uri):
 # drop collections and reset
 #
 def mongoo_reset(srccol, destcol):
-    print "dropping housekeeping collection:", housekeep._get_collection_name()
+    print MYID, "dropping housekeeping collection:", housekeep._get_collection_name()
     housekeep.drop_collection()
-    print "dropping destination collection:", destcol
+    print MYID, "dropping destination collection:", destcol
     destcol.drop_collection()
     time.sleep(1)
 #
@@ -79,14 +77,14 @@ def mongoo_reset(srccol, destcol):
 #
 def mongoo_init(srccol, destcol, key, query, chunk=3):
     if housekeep.objects.count() == 0:
-        print "initializing housekeeping for", housekeep._get_collection_name()
+        print MYID, "initializing housekeeping for", housekeep._get_collection_name()
         q = srccol.objects(**query).only(key).order_by(key)
     else:
         last = housekeep.objects().order_by('-start')[0].end
-        print "last partition field in housekeep:", last
+        print MYID, "last partition field in housekeep:", last
         query[key + "__gt"] = last
         q = srccol.objects(**query).only(key).order_by(key)
-        print "added %d entries to %s" % (q.count(), housekeep._get_collection_name())
+        print MYID, "added %d entries to %s" % (q.count(), housekeep._get_collection_name())
     tot = q.count()
 
     while q.count() > 0:
@@ -118,17 +116,17 @@ def mongoo_process(srccol, destcol, key, query, cb):
             query[key + "__gte"] = hko.start
             query[key + "__lte"] = hko.end
             cursor = srccol.objects(**query)
-            print "%s mongo_process: %d elements in chunk %s-%s" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), cursor.count(), hko.start, hko.end)
+            print MYID, "%s mongo_process: %d elements in chunk %s-%s" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), cursor.count(), hko.start, hko.end)
             hko.total = cursor.count()
             hko.good, hko.bad, hko.log = cb(cursor, destcol)
             hko.state = 'done'
             hko.save()
         else:
-            print "race lost -- skipping"
-        print "sleep..."
+            print MYID, "race lost -- skipping"
+        print MYID, "sleep..."
         sys.stdout.flush()
         time.sleep(WAITSLEEP)
-    print "mongo_process over"
+    print MYID, "mongo_process over"
 
 if __name__ == "__main__":
     par = argparse.ArgumentParser(description = "Mongo Operations")
@@ -139,6 +137,7 @@ if __name__ == "__main__":
     par.add_argument("cmd")
     par.add_argument("--chunk", type=int, default = 3)
     par.add_argument("--multi", type=int, default = 1)
+    par.add_argument("--sleep", type=float, default = 1)
     config = par.parse_args()
 #     if len(sys.argv) > 1 and 'config=' in sys.argv[1]:
 #         config = importlib.import_module(sys.argv[1][7:])
@@ -150,13 +149,15 @@ if __name__ == "__main__":
     if config.source == config.dest:
         raise Exception("Source and destination must be different collections")
     print "MYID:", MYID
+    print MYID, "CMD:", sys.argv
     src_dest = config.source + "_" + config.dest
     goo = importlib.import_module(src_dest)
     source = getattr(goo, config.source)
     dest = getattr(goo, config.dest)
+    WAITSLEEP = config.sleep
 
-    print "source database, collection:", config.src_db, source
-    print "destination database, collection:", config.dest_db, dest
+    print MYID, "source database, collection:", config.src_db, source
+    print MYID, "destination database, collection:", config.dest_db, dest
     
     connect2db(source, config.src_db)
     connect2db(dest, config.dest_db)
@@ -172,7 +173,7 @@ if __name__ == "__main__":
     t0()
         
     if 'reset' == config.cmd:
-        print "drop housekeep(%s) and %s at %s, sure?" % (hk_colname, config.dest, config.dest_db)
+        print MYID, "drop housekeep(%s) and %s at %s, sure?" % (hk_colname, config.dest, config.dest_db)
         if raw_input()[:1] == 'y':
             mongoo_reset(source, dest)
             if hasattr(goo, 'reset'):
@@ -184,18 +185,18 @@ if __name__ == "__main__":
     elif 'process' == config.cmd:
         if config.multi > 1:
             for i in range(config.multi):
-                do = "python %s %s %s %s %s --chunk=%d process" % (sys.argv[0], 
-                        config.src_db, config.source, config.dest_db, config.dest, config.chunk)
-                if i < config.multi-1:
+                do = "python %s %s %s %s %s --chunk=%d --sleep=%d process" % (sys.argv[0], 
+                        config.src_db, config.source, config.dest_db, config.dest, config.chunk, config.sleep)
+                if config.multi > 1:
                     do += " &"
-                print "doing:", do
+                print MYID, "doing:", do
                 os.system(do)
         else:
             mongoo_process(source, dest, goo.KEY, query, goo.process)
 
     elif 'status' == config.cmd:
-        print "----------- TRACKING STATUS ------------"
-        print "%s done, %s not" % (housekeep.objects(state = 'done').count(), housekeep.objects(state__ne = 'done').count())
+        print MYID, "----------- TRACKING STATUS ------------"
+        print MYID, "%s done, %s not" % (housekeep.objects(state = 'done').count(), housekeep.objects(state__ne = 'done').count())
         bad = 0
         good = 0
         tot = 0
@@ -204,17 +205,28 @@ if __name__ == "__main__":
             good += h.good
             tot += h.total
             if h.total != h.good:
-                print "Some badness found for %s-%s:" % (h.start, h.end)
-                print "%d are good, %d are bad." % (h.good, h.bad)
+                print MYID, "Some badness found for %s-%s:" % (h.start, h.end)
+                print MYID, "%d are good, %d are bad." % (h.good, h.bad)
                 for badd in h.log:
-                    print "----------------------------------------"
-                    print badd
-                    print "----------------------------------------"
+                    print MYID, "----------------------------------------"
+                    print MYID, badd
+                    print MYID, "----------------------------------------"
 #         pp(housekeep.objects)
-        print "total good: %d bad: %d sum: %d expected total: %d" % (good, bad, good+bad, tot)         
+        print MYID, "total good: %d bad: %d sum: %d expected total: %d" % (good, bad, good+bad, tot)         
+
+    elif 'wait' == config.cmd:
+        print MYID, "----------- WAITING FOR PROCESSES TO COMPLETE ------------"
+        tot = housekeep.objects.count()
+        done = housekeep.objects(state = 'done').count()
+        while done < tot:
+            time.sleep(WAITSLEEP)
+            print MYID, "%s still waiting: %d out of %d complete" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot)
+            done = housekeep.objects(state = 'done').count()
+        print MYID, "----------- THE WAITING GAME IS OVER ------------"
+
     elif 'dev' == config.cmd:
         WAITSLEEP = 0
-        print "drop housekeep(%s) and %s at %s, sure?" % (hk_colname, config.dest, config.dest_db)
+        print MYID, "drop housekeep(%s) and %s at %s, sure?" % (hk_colname, config.dest, config.dest_db)
         if raw_input()[:1] == 'y':
             mongoo_reset(source, dest)
             if hasattr(goo, 'reset'):
