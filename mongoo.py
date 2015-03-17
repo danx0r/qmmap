@@ -182,7 +182,16 @@ if __name__ == "__main__":
         mongoo_init(source, dest, goo.KEY, query, config.chunk)
         
     elif 'process' == config.cmd:
-        mongoo_process(source, dest, goo.KEY, query, goo.process)
+        if config.multi > 1:
+            for i in range(config.multi):
+                do = "python %s %s %s %s %s --chunk=%d process" % (sys.argv[0], 
+                        config.src_db, config.source, config.dest_db, config.dest, config.chunk)
+                if i < config.multi-1:
+                    do += " &"
+                print "doing:", do
+                os.system(do)
+        else:
+            mongoo_process(source, dest, goo.KEY, query, goo.process)
 
     elif 'status' == config.cmd:
         print "----------- TRACKING STATUS ------------"
