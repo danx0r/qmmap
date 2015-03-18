@@ -43,35 +43,32 @@ QUERY = {'num__ne': 9}
 # source is mongoengine cursor; dest is mongoengine object class
 # both are associated with db connections
 #
-def process(source, dest):
+def process(source, dest, myid):
     log = []
     good = bad = 0
-    print "  process %d from" % source.count(), source._collection, "to", dest.objects._collection
+    print myid, "  process %d from" % source.count(), source._collection, "to", dest.objects._collection
     for x in source:
         try:
             if x.num != 15:
-                print "    goosrc_goodest.process:", x.num
+                print myid, "    goosrc_goodest.process:", x.num
                 sys.stdout.flush()
                 d = dest()
                 d.numnum = str(x.num*2)
                 d.save()
             else:
-                print "    goosrc_goodest: skipping", x.num
+                print myid, "    goosrc_goodest: skipping", x.num
                 sys.stdout.flush()
                 raise Exception("spurious exception")
             good += 1
         except:
-            print "------------ERROR--------------"
+            print myid, "------------ERROR--------------"
             bad += 1
             err = "exception processing %s\n" % x.num
             err += traceback.format_exc()
             log.append(err)
-            print err
-            print "-------------------------------"
+            print myid, err
+            print myid, "-------------------------------"
             sys.stdout.flush()
     return good, bad, log
 
-if __name__ == "__main__":
-    print "test mongoo using imports"
-    import mongoo
     
