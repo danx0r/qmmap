@@ -28,8 +28,8 @@ def t0():
     print MYID, "---PROFILING---"
     T = time.time()
 
-def t1():
-    print MYID, "---%s seconds---" % (time.time() - T)
+def t1(s=''):
+    print MYID, "---%s -- seconds %s---" % (s, time.time() - T)
 
 class hkstate(Enum):
     open = 'open'
@@ -85,15 +85,16 @@ def mongoo_init(srccol, destcol, key, query, chunk=3):
         query[key + "__gt"] = last
         q = srccol.objects(**query).only(key).order_by(key)
         print MYID, "added %d entries to %s" % (q.count(), housekeep._get_collection_name())
-    tot = q.count()
 
-    while q.count() > 0:
+    tot = q.limit(chunk).count()
+    while tot > 0:
         hk = housekeep()
         hk.start = getattr(q[0], key)
-        hk.end =  getattr(q[min(chunk-1, q.count()-1)], key)
+        hk.end =  getattr(q[min(chunk-1, tot-1)], key)
         hk.save()
         query[key + "__gt"] = hk.end
         q = srccol.objects(**query).only(key).order_by(key)
+        tot = q.limit(chunk).count()                    #limit count to chunk for speed
     init = True
 
 #
