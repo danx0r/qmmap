@@ -198,7 +198,7 @@ if __name__ == "__main__":
     elif 'process' == config.cmd:
         if config.multi > 1:
             for i in range(config.multi):
-                do = "python %s %s %s %s %s --sleep=%d process &" % (sys.argv[0], 
+                do = "python %s %s %s %s %s --sleep=%f process &" % (sys.argv[0], 
                         config.src_db, config.source, config.dest_db, config.dest, config.sleep)
                 print MYID, "doing:", do
                 os.system(do)
