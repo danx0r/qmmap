@@ -21,6 +21,9 @@ sys.path.append(PYBASE)
 sys.path.append(os.getcwdu())
 from utils.pp import pp
 
+MIN_CHUNK_SIZE = 3
+MAX_CHUNK_SIZE = 600
+
 MYID = "%05d-%s" % (os.getpid(), repr(time.time()*1000000)[-8:-2])
 
 def t0():
@@ -87,8 +90,10 @@ def mongoo_init(srccol, destcol, key, query, chunks):
         print MYID, "added %d entries to %s" % (q.count(), housekeep._get_collection_name())
     
     chunk = q.count() / chunks
-    if chunk < 3:
-        chunk = 3
+    if chunk < MIN_CHUNK_SIZE:
+        chunk = MIN_CHUNK_SIZE
+    if chunk > MAX_CHUNK_SIZE:
+        chunk = MAX_CHUNK_SIZE
     print MYID, "chunk size:", chunk
 
     tot = q.limit(chunk).count()
