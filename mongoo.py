@@ -188,10 +188,8 @@ if __name__ == "__main__":
     elif 'process' == config.cmd:
         if config.multi > 1:
             for i in range(config.multi):
-                do = "python %s %s %s %s %s --chunk=%d --sleep=%d process" % (sys.argv[0], 
+                do = "python %s %s %s %s %s --chunk=%d --sleep=%d process &" % (sys.argv[0], 
                         config.src_db, config.source, config.dest_db, config.dest, config.chunk, config.sleep)
-                if config.multi > 1:
-                    do += " &"
                 print MYID, "doing:", do
                 os.system(do)
         else:
