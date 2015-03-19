@@ -75,7 +75,7 @@ def mongoo_reset(srccol, destcol):
 #
 # set up housekeeping
 #
-def mongoo_init(srccol, destcol, key, query, chunk=3):
+def mongoo_init(srccol, destcol, key, query, chunks):
     if housekeep.objects.count() == 0:
         print MYID, "initializing housekeeping for", housekeep._get_collection_name()
         q = srccol.objects(**query).only(key).order_by(key)
@@ -85,6 +85,11 @@ def mongoo_init(srccol, destcol, key, query, chunk=3):
         query[key + "__gt"] = last
         q = srccol.objects(**query).only(key).order_by(key)
         print MYID, "added %d entries to %s" % (q.count(), housekeep._get_collection_name())
+    
+    chunk = q.count() / chunks
+    if chunk < 3:
+        chunk = 3
+    print MYID, "chunk size:", chunk
 
     tot = q.limit(chunk).count()
     while tot > 0:
