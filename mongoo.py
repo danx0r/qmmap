@@ -227,7 +227,7 @@ if __name__ == "__main__":
                     print MYID, "----------------------------------------"
 #         pp(housekeep.objects)
         print MYID, "total good: %d bad: %d sum: %d expected total: %d" % (good, bad, good+bad, tot)         
-        print MYID, "progress: %.2f%%" % (done * 100.0 / housekeep.objects.count())
+        print MYID, "progress: %.3f%%" % (done * 100.0 / housekeep.objects.count())
 
     elif 'wait' == config.cmd:
         print MYID, "----------- WAITING FOR PROCESSES TO COMPLETE ------------"
