@@ -217,8 +217,8 @@ if __name__ == "__main__":
                 done += 1
             bad += h.bad
             good += h.good
-            tot += h.total
-            if h.total != h.good:
+            tot += h.total if h.total != None else 0
+            if h.total and h.total != h.good:
                 print MYID, "Some badness found for %s-%s:" % (h.start, h.end)
                 print MYID, "%d are good, %d are bad." % (h.good, h.bad)
                 for badd in h.log:
