@@ -211,7 +211,10 @@ if __name__ == "__main__":
         bad = 0
         good = 0
         tot = 0
+        done = 0
         for h in housekeep.objects:
+            if h.state == hkstate.done:
+                done += 1
             bad += h.bad
             good += h.good
             tot += h.total
@@ -224,6 +227,7 @@ if __name__ == "__main__":
                     print MYID, "----------------------------------------"
 #         pp(housekeep.objects)
         print MYID, "total good: %d bad: %d sum: %d expected total: %d" % (good, bad, good+bad, tot)         
+        print MYID, "progress: %.2f%%" % (float(done) / housekeep.objects.count())
 
     elif 'wait' == config.cmd:
         print MYID, "----------- WAITING FOR PROCESSES TO COMPLETE ------------"
