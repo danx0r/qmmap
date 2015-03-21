@@ -13,6 +13,7 @@ import mongoengine as meng
 from mongoengine.context_managers import switch_db
 from mongoengine.context_managers import switch_collection
 from extras_mongoengine.fields import StringEnumField
+import git
 
 #we need class defs from science (at least for pp)
 # PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../science") )     #science is parallel
@@ -48,6 +49,7 @@ class housekeep(meng.Document):
     bad = meng.IntField(default = 0)                    # entries we failed to process to completion
     log = meng.ListField()                              # log of misery -- each item a failed processing incident
     state = StringEnumField(hkstate, default = 'open')
+    git = meng.StringField()                                 # git commit of this version of source_destination
     meta = {'indexes': ['state']}
 
 connect2db_cnt = 0
@@ -123,6 +125,8 @@ def mongoo_process(srccol, destcol, key, query, cb):
         if raw != None:
             #reload as mongoengine object -- _id is .start (because set as primary_key)
             hko = housekeep.objects(start = raw['_id'])[0]
+            #record git commit for sanity
+            hko.git = git.Git('.').rev_parse('HEAD')
             #get data pointed to by housekeep
             query[key + "__gte"] = hko.start
             query[key + "__lte"] = hko.end
