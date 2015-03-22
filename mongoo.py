@@ -30,10 +30,12 @@ MYID = "%05d-%s" % (os.getpid(), repr(time.time()*1000000)[-8:-2])
 def t0():
     global T
     print MYID, "---PROFILING---"
+    sys.stdout.flush()
     T = time.time()
 
 def t1(s=''):
     print MYID, "---%s -- seconds %s---" % (s, time.time() - T)
+    sys.stdout.flush()
 
 class hkstate(Enum):
     open = 'open'
@@ -91,6 +93,7 @@ def mongoo_init(srccol, destcol, key, query, chunks):
         query[key + "__gt"] = last
         q = srccol.objects(**query).only(key).order_by(key)
         print MYID, "added %d entries to %s" % (q.count(), housekeep._get_collection_name())
+        sys.stdout.flush()
     
     chunk = q.count() / chunks
     if chunk < MIN_CHUNK_SIZE:
@@ -98,6 +101,7 @@ def mongoo_init(srccol, destcol, key, query, chunks):
     if chunk > MAX_CHUNK_SIZE:
         chunk = MAX_CHUNK_SIZE
     print MYID, "chunk size:", chunk
+    sys.stdout.flush()
 
     tot = q.limit(chunk).count()
     while tot > 0:
@@ -133,6 +137,7 @@ def mongoo_process(srccol, destcol, key, query, cb):
             query[key + "__lte"] = hko.end
             cursor = srccol.objects(**query)
             print MYID, "%s mongo_process: %d elements in chunk %s-%s" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), cursor.count(), hko.start, hko.end)
+            sys.stdout.flush()
             hko.total = cursor.count()
             hko.good, hko.bad, hko.log = cb(cursor, destcol, MYID)
             hko.state = 'done'
@@ -207,6 +212,7 @@ if __name__ == "__main__":
                 do = "python %s %s %s %s %s --sleep=%f process &" % (sys.argv[0], 
                         config.src_db, config.source, config.dest_db, config.dest, config.sleep)
                 print MYID, "doing:", do
+                sys.stdout.flush()
                 os.system(do)
         else:
             mongoo_process(source, dest, goo.KEY, query, goo.process)
@@ -234,6 +240,7 @@ if __name__ == "__main__":
 #         pp(housekeep.objects)
         print MYID, "total good: %d bad: %d sum: %d expected total: %d" % (good, bad, good+bad, tot)         
         print MYID, "progress: %.3f%%" % (done * 100.0 / housekeep.objects.count())
+        sys.stdout.flush()
 
     elif 'wait' == config.cmd:
         print MYID, "----------- WAITING FOR PROCESSES TO COMPLETE ------------"
@@ -243,18 +250,23 @@ if __name__ == "__main__":
             time.sleep(WAITSLEEP)
             q = housekeep.objects(state = 'done').only('time')
             done = q.count()
-            pdone = 100. * done / tot
-            q = q.order_by('time')
-            first = q[0].time
-            q = q.order_by('-time')
-            last = q[0].time
-#             print "DEBUG", first, last, (last-first).seconds
-            tdone = float((last-first).seconds)
-            ttot = tdone*tot / done
-            trem = ttot - tdone
-            print MYID, "%s still waiting: %d out of %d complete (%.3f%%). %.3f seconds complete, %.3f remaining" \
-                        % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot, pdone, tdone, trem)
+            if done > 0:
+                pdone = 100. * done / tot
+                q = q.order_by('time')
+                first = q[0].time
+                q = q.order_by('-time')
+                last = q[0].time
+    #             print "DEBUG", first, last, (last-first).seconds
+                tdone = float((last-first).seconds)
+                ttot = tdone*tot / done
+                trem = ttot - tdone
+                print MYID, "%s still waiting: %d out of %d complete (%.3f%%). %.3f seconds complete, %.3f remaining" \
+                            % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot, pdone, tdone, trem)
+            else:
+                print MYID, "%s still waiting; nothing done so far" % (datetime.datetime.now())
+            sys.stdout.flush()
         print MYID, "----------- THE WAITING GAME IS OVER ------------"
+        sys.stdout.flush()
 
     elif 'dev' == config.cmd:
         WAITSLEEP = 0
