@@ -247,7 +247,6 @@ if __name__ == "__main__":
         tot = housekeep.objects.count()
         done = housekeep.objects(state = 'done').count()
         while done < tot:
-            time.sleep(WAITSLEEP)
             q = housekeep.objects(state = 'done').only('time')
             done = q.count()
             if done > 0:
@@ -260,11 +259,12 @@ if __name__ == "__main__":
                 tdone = float((last-first).seconds)
                 ttot = tdone*tot / done
                 trem = ttot - tdone
-                print MYID, "%s still waiting: %d out of %d complete (%.3f%%). %.3f seconds complete, %.3f remaining" \
-                            % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot, pdone, tdone, trem)
+                print MYID, "%s still waiting: %d out of %d complete (%.3f%%). %.3f seconds complete, %.3f remaining (%.5f hours)" \
+                            % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot, pdone, tdone, trem, trem / 3600.0)
             else:
                 print MYID, "%s still waiting; nothing done so far" % (datetime.datetime.now())
             sys.stdout.flush()
+            time.sleep(WAITSLEEP)
         print MYID, "----------- THE WAITING GAME IS OVER ------------"
         sys.stdout.flush()
 
