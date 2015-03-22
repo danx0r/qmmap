@@ -50,7 +50,8 @@ class housekeep(meng.Document):
     log = meng.ListField()                              # log of misery -- each item a failed processing incident
     state = StringEnumField(hkstate, default = 'open')
     git = meng.StringField()                                 # git commit of this version of source_destination
-    meta = {'indexes': ['state']}
+    time = meng.DateTimeField()
+    meta = {'indexes': ['state', 'time']}
 
 connect2db_cnt = 0
 
@@ -135,6 +136,7 @@ def mongoo_process(srccol, destcol, key, query, cb):
             hko.total = cursor.count()
             hko.good, hko.bad, hko.log = cb(cursor, destcol, MYID)
             hko.state = 'done'
+            hko.time = datetime.datetime.now()
             hko.save()
         else:
             print MYID, "race lost -- skipping"
@@ -239,8 +241,19 @@ if __name__ == "__main__":
         done = housekeep.objects(state = 'done').count()
         while done < tot:
             time.sleep(WAITSLEEP)
-            print MYID, "%s still waiting: %d out of %d complete" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot)
-            done = housekeep.objects(state = 'done').count()
+            q = housekeep.objects(state = 'done').only('time')
+            done = q.count()
+            pdone = 100. * done / tot
+            q = q.order_by('time')
+            first = q[0].time
+            q = q.order_by('-time')
+            last = q[0].time
+#             print "DEBUG", first, last, (last-first).seconds
+            tdone = float((last-first).seconds)
+            ttot = tdone*tot / done
+            trem = ttot - tdone
+            print MYID, "%s still waiting: %d out of %d complete (%.3f%%). %.3f seconds complete, %.3f remaining" \
+                        % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot, pdone, tdone, trem)
         print MYID, "----------- THE WAITING GAME IS OVER ------------"
 
     elif 'dev' == config.cmd:
