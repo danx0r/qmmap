@@ -49,7 +49,7 @@ def process(source, dest, myid):
     print myid, "  process %d from" % source.count(), source._collection, "to", dest.objects._collection
     for x in source:
         try:
-            if x.num != 15:
+            if x.num != 24:
                 print myid, "    goosrc_goodest.process:", x.num
                 sys.stdout.flush()
                 d = dest()

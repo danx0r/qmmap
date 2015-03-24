@@ -159,6 +159,16 @@ def mongoo_status():
                 print MYID, "----------------------------------------"
     print MYID, "total good: %d bad: %d sum: %d expected total: %d" % (good, bad, good+bad, tot)         
 
+def mongoo_wait():
+    print MYID, "----------- WAITING FOR PROCESSES TO COMPLETE ------------"
+    tot = housekeep.objects.count()
+    done = housekeep.objects(state = 'done').count()
+    while done < tot:
+        time.sleep(WAITSLEEP)
+        print MYID, "%s still waiting: %d out of %d complete" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot)
+        done = housekeep.objects(state = 'done').count()
+    print MYID, "----------- THE WAITING GAME IS OVER ------------"
+
 if __name__ == "__main__":
     par = argparse.ArgumentParser(description = "Mongo Operations")
     par.add_argument("src_db")
@@ -229,14 +239,7 @@ if __name__ == "__main__":
         mongoo_status()
 
     elif 'wait' == config.cmd:
-        print MYID, "----------- WAITING FOR PROCESSES TO COMPLETE ------------"
-        tot = housekeep.objects.count()
-        done = housekeep.objects(state = 'done').count()
-        while done < tot:
-            time.sleep(WAITSLEEP)
-            print MYID, "%s still waiting: %d out of %d complete" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot)
-            done = housekeep.objects(state = 'done').count()
-        print MYID, "----------- THE WAITING GAME IS OVER ------------"
+        mongoo_wait()
 
     elif 'dev' == config.cmd:
         WAITSLEEP = 0
@@ -249,6 +252,7 @@ if __name__ == "__main__":
         if hasattr(goo, 'init'):
             goo.init(source, dest, MYID)
         mongoo_process(source, dest, goo.KEY, query, goo.process)
+        mongoo_wait()
         mongoo_status()
 
     else:
