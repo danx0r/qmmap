@@ -79,6 +79,7 @@ def mongoo_reset(srccol, destcol):
 # set up housekeeping
 #
 def mongoo_init(srccol, destcol, key, query, chunks):
+    query = dict(query)                                 #this gets abused, avoid side fx
     if housekeep.objects.count() == 0:
         print MYID, "initializing housekeeping for", housekeep._get_collection_name()
         q = srccol.objects(**query).only(key).order_by(key)
@@ -139,6 +140,25 @@ def mongoo_process(srccol, destcol, key, query, cb):
         time.sleep(WAITSLEEP)
     print MYID, "mongo_process over"
 
+def mongoo_status():
+    print MYID, "----------- TRACKING STATUS ------------"
+    print MYID, "%s done, %s not" % (housekeep.objects(state = 'done').count(), housekeep.objects(state__ne = 'done').count())
+    bad = 0
+    good = 0
+    tot = 0
+    for h in housekeep.objects:
+        bad += h.bad
+        good += h.good
+        tot += h.total
+        if h.total != h.good:
+            print MYID, "Some badness found for %s-%s:" % (h.start, h.end)
+            print MYID, "%d are good, %d are bad." % (h.good, h.bad)
+            for badd in h.log:
+                print MYID, "----------------------------------------"
+                print MYID, badd
+                print MYID, "----------------------------------------"
+    print MYID, "total good: %d bad: %d sum: %d expected total: %d" % (good, bad, good+bad, tot)         
+
 if __name__ == "__main__":
     par = argparse.ArgumentParser(description = "Mongo Operations")
     par.add_argument("src_db")
@@ -182,7 +202,7 @@ if __name__ == "__main__":
         query = {}
 
     t0()
-        
+
     if 'reset' == config.cmd:
         print MYID, "drop housekeep(%s) and %s at %s, sure?" % (hk_colname, config.dest, config.dest_db)
         if raw_input()[:1] == 'y':
@@ -206,24 +226,7 @@ if __name__ == "__main__":
             mongoo_process(source, dest, goo.KEY, query, goo.process)
 
     elif 'status' == config.cmd:
-        print MYID, "----------- TRACKING STATUS ------------"
-        print MYID, "%s done, %s not" % (housekeep.objects(state = 'done').count(), housekeep.objects(state__ne = 'done').count())
-        bad = 0
-        good = 0
-        tot = 0
-        for h in housekeep.objects:
-            bad += h.bad
-            good += h.good
-            tot += h.total
-            if h.total != h.good:
-                print MYID, "Some badness found for %s-%s:" % (h.start, h.end)
-                print MYID, "%d are good, %d are bad." % (h.good, h.bad)
-                for badd in h.log:
-                    print MYID, "----------------------------------------"
-                    print MYID, badd
-                    print MYID, "----------------------------------------"
-#         pp(housekeep.objects)
-        print MYID, "total good: %d bad: %d sum: %d expected total: %d" % (good, bad, good+bad, tot)         
+        mongoo_status()
 
     elif 'wait' == config.cmd:
         print MYID, "----------- WAITING FOR PROCESSES TO COMPLETE ------------"
@@ -242,8 +245,11 @@ if __name__ == "__main__":
             mongoo_reset(source, dest)
             if hasattr(goo, 'reset'):
                 goo.reset(source, dest)
-        mongoo_init(source, dest, goo.KEY, query)
+        mongoo_init(source, dest, goo.KEY, query, config.chunk)
+        if hasattr(goo, 'init'):
+            goo.init(source, dest, MYID)
         mongoo_process(source, dest, goo.KEY, query, goo.process)
+        mongoo_status()
 
     else:
         print "usage:"
