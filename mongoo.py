@@ -97,8 +97,12 @@ def mongoo_init(srccol, destcol, key, query, chunks):
         chunk = MAX_CHUNK_SIZE
     print MYID, "chunk size:", chunk
 
+    i = 0
     tot = q.limit(chunk).count()
     while tot > 0:
+        print MYID, "housekeeping: %d" % i
+        i +=1
+        sys.stdout.flush()
         hk = housekeep()
         hk.start = getattr(q[0], key)
         hk.end =  getattr(q[min(chunk-1, tot-1)], key)
@@ -249,7 +253,8 @@ if __name__ == "__main__":
         if config.multi > 1:
             for i in range(config.multi):
                 do = "python %s %s %s %s %s --sleep=%d process &" % (sys.argv[0], 
-                        config.src_db, config.source, config.dest_db, config.dest, config.sleep)
+                    #why why why why why                                                 
+                    config.src_db.replace('$', "\\$"), config.source, config.dest_db.replace('$', "\\$"), config.dest, config.sleep)
                 print MYID, "doing:", do
                 os.system(do)
         else:
