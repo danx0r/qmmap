@@ -13,6 +13,7 @@ import mongoengine as meng
 from mongoengine.context_managers import switch_db
 from mongoengine.context_managers import switch_collection
 from extras_mongoengine.fields import StringEnumField
+import git
 
 #we need class defs from science (at least for pp)
 # PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../science") )     #science is parallel
@@ -29,10 +30,12 @@ MYID = "%05d-%s" % (os.getpid(), repr(time.time()*1000000)[-8:-2])
 def t0():
     global T
     print MYID, "---PROFILING---"
+    sys.stdout.flush()
     T = time.time()
 
 def t1(s=''):
     print MYID, "---%s -- seconds %s---" % (s, time.time() - T)
+    sys.stdout.flush()
 
 class hkstate(Enum):
     open = 'open'
@@ -48,7 +51,9 @@ class housekeep(meng.Document):
     bad = meng.IntField(default = 0)                    # entries we failed to process to completion
     log = meng.ListField()                              # log of misery -- each item a failed processing incident
     state = StringEnumField(hkstate, default = 'open')
-    meta = {'indexes': ['state']}
+    git = meng.StringField()                                 # git commit of this version of source_destination
+    time = meng.DateTimeField()
+    meta = {'indexes': ['state', 'time']}
 
 connect2db_cnt = 0
 
@@ -89,6 +94,7 @@ def mongoo_init(srccol, destcol, key, query, chunks):
         query[key + "__gt"] = last
         q = srccol.objects(**query).only(key).order_by(key)
         print MYID, "added %d entries to %s" % (q.count(), housekeep._get_collection_name())
+        sys.stdout.flush()
     
     chunk = q.count() / chunks
     if chunk < MIN_CHUNK_SIZE:
@@ -96,6 +102,7 @@ def mongoo_init(srccol, destcol, key, query, chunks):
     if chunk > MAX_CHUNK_SIZE:
         chunk = MAX_CHUNK_SIZE
     print MYID, "chunk size:", chunk
+    sys.stdout.flush()
 
     i = 0
     tot = q.limit(chunk).count()
@@ -138,13 +145,17 @@ def mongoo_process(srccol, destcol, key, query, cb):
         if raw != None:
             #reload as mongoengine object -- _id is .start (because set as primary_key)
             hko = housekeep.objects(start = raw['_id'])[0]
+            #record git commit for sanity
+            hko.git = git.Git('.').rev_parse('HEAD')
             #get data pointed to by housekeep
             query[key + "__gte"] = hko.start
             query[key + "__lte"] = hko.end
             cursor = srccol.objects(**query)
             print MYID, "%s mongo_process: %d elements in chunk %s-%s" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), cursor.count(), hko.start, hko.end)
+            sys.stdout.flush()
             hko.good, hko.bad, hko.log = cb(cursor, destcol, MYID)
             hko.state = 'done'
+            hko.time = datetime.datetime.now()
             hko.save()
         else:
             print MYID, "race lost -- skipping"
@@ -256,6 +267,7 @@ if __name__ == "__main__":
                     #why why why why why                                                 
                     config.src_db.replace('$', "\\$"), config.source, config.dest_db.replace('$', "\\$"), config.dest, config.sleep)
                 print MYID, "doing:", do
+                sys.stdout.flush()
                 os.system(do)
         else:
             mongoo_process(source, dest, goo.KEY, query, goo.process)
