@@ -84,6 +84,7 @@ def mongoo_reset(srccol, destcol):
 # set up housekeeping
 #
 def mongoo_init(srccol, destcol, key, query, chunks):
+    query = dict(query)                                 #this gets abused, avoid side fx
     if housekeep.objects.count() == 0:
         print MYID, "initializing housekeeping for", housekeep._get_collection_name()
         q = srccol.objects(**query).only(key).order_by(key)
@@ -103,14 +104,28 @@ def mongoo_init(srccol, destcol, key, query, chunks):
     print MYID, "chunk size:", chunk
     sys.stdout.flush()
 
+    i = 0
     tot = q.limit(chunk).count()
     while tot > 0:
+        print MYID, "housekeeping: %d" % i
+        i +=1
+        sys.stdout.flush()
         hk = housekeep()
         hk.start = getattr(q[0], key)
         hk.end =  getattr(q[min(chunk-1, tot-1)], key)
+        
+        #calc total for this segment
+        query[key + "__gte"] = hk.start
+        query[key + "__lte"] = hk.end
+        hk.total = srccol.objects(**query).count()
+        del query[key + "__gte"]
+        del query[key + "__lte"]
         hk.save()
+
+        #get start of next segment
         query[key + "__gt"] = hk.end
         q = srccol.objects(**query).only(key).order_by(key)
+        del query[key + "__gt"]
         tot = q.limit(chunk).count()                    #limit count to chunk for speed
     init = True
 
@@ -138,7 +153,6 @@ def mongoo_process(srccol, destcol, key, query, cb):
             cursor = srccol.objects(**query)
             print MYID, "%s mongo_process: %d elements in chunk %s-%s" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), cursor.count(), hko.start, hko.end)
             sys.stdout.flush()
-            hko.total = cursor.count()
             hko.good, hko.bad, hko.log = cb(cursor, destcol, MYID)
             hko.state = 'done'
             hko.time = datetime.datetime.now()
@@ -150,6 +164,45 @@ def mongoo_process(srccol, destcol, key, query, cb):
         time.sleep(WAITSLEEP)
     print MYID, "mongo_process over"
 
+def mongoo_status():
+    print MYID, "----------- TRACKING STATUS ------------"
+    print MYID, "%s done, %s not" % (housekeep.objects(state = 'done').count(), housekeep.objects(state__ne = 'done').count())
+    bad = 0
+    good = 0
+    tot = 0
+    for h in housekeep.objects:
+        tot += h.total
+    for h in housekeep.objects(state = 'done'):
+        bad += h.bad
+        good += h.good
+        if h.total != h.good:
+            print MYID, "Some badness found for %s-%s:" % (h.start, h.end)
+            print MYID, "%d are good, %d are bad." % (h.good, h.bad)
+            for badd in h.log:
+                print MYID, "----------------------------------------"
+                print MYID, badd
+                print MYID, "----------------------------------------"
+    print MYID, "total good: %d bad: %d sum: %d expected total: %d" % (good, bad, good+bad, tot)         
+
+def mongoo_wait(timeout):
+    print MYID, "----------- WAITING FOR PROCESSES TO COMPLETE ------------"
+    tot = housekeep.objects.count()
+    done = housekeep.objects(state = 'done').count()
+    tstart = time.time()
+    olddun = done
+    while done < tot:
+        t = time.time()
+        if t - tstart > timeout:
+            print MYID, "WAITING TIMEOUT -- unfinished processes:", [x.id for x in housekeep.objects(state__ne = 'done')]
+            break
+        time.sleep(WAITSLEEP)
+        print MYID, "%s still waiting: %d out of %d complete" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot)
+        done = housekeep.objects(state = 'done').count()
+        if done != olddun:
+            tstart = t
+            olddun = done
+    print MYID, "----------- THE WAITING GAME IS OVER ------------"
+
 if __name__ == "__main__":
     par = argparse.ArgumentParser(description = "Mongo Operations")
     par.add_argument("src_db")
@@ -160,6 +213,7 @@ if __name__ == "__main__":
     par.add_argument("--chunk", type=int, default = 3)
     par.add_argument("--multi", type=int, default = 1)
     par.add_argument("--sleep", type=float, default = 1)
+    par.add_argument("--timeout", type=int, default = 10)
     config = par.parse_args()
 #     if len(sys.argv) > 1 and 'config=' in sys.argv[1]:
 #         config = importlib.import_module(sys.argv[1][7:])
@@ -193,7 +247,7 @@ if __name__ == "__main__":
         query = {}
 
     t0()
-        
+
     if 'reset' == config.cmd:
         print MYID, "drop housekeep(%s) and %s at %s, sure?" % (hk_colname, config.dest, config.dest_db)
         if raw_input()[:1] == 'y':
@@ -209,8 +263,9 @@ if __name__ == "__main__":
     elif 'process' == config.cmd:
         if config.multi > 1:
             for i in range(config.multi):
-                do = "python %s %s %s %s %s --sleep=%f process &" % (sys.argv[0], 
-                        config.src_db, config.source, config.dest_db, config.dest, config.sleep)
+                do = "python %s %s %s %s %s --sleep=%d process &" % (sys.argv[0], 
+                    #why why why why why                                                 
+                    config.src_db.replace('$', "\\$"), config.source, config.dest_db.replace('$', "\\$"), config.dest, config.sleep)
                 print MYID, "doing:", do
                 sys.stdout.flush()
                 os.system(do)
@@ -218,55 +273,10 @@ if __name__ == "__main__":
             mongoo_process(source, dest, goo.KEY, query, goo.process)
 
     elif 'status' == config.cmd:
-        print MYID, "----------- TRACKING STATUS ------------"
-        print MYID, "%s done, %s not" % (housekeep.objects(state = 'done').count(), housekeep.objects(state__ne = 'done').count())
-        bad = 0
-        good = 0
-        tot = 0
-        done = 0
-        for h in housekeep.objects:
-            if h.state == hkstate.done:
-                done += 1
-            bad += h.bad
-            good += h.good
-            tot += h.total if h.total != None else 0
-            if h.total and h.total != h.good:
-                print MYID, "Some badness found for %s-%s:" % (h.start, h.end)
-                print MYID, "%d are good, %d are bad." % (h.good, h.bad)
-                for badd in h.log:
-                    print MYID, "----------------------------------------"
-                    print MYID, badd
-                    print MYID, "----------------------------------------"
-#         pp(housekeep.objects)
-        print MYID, "total good: %d bad: %d sum: %d expected total: %d" % (good, bad, good+bad, tot)         
-        print MYID, "progress: %.3f%%" % (done * 100.0 / housekeep.objects.count())
-        sys.stdout.flush()
+        mongoo_status()
 
     elif 'wait' == config.cmd:
-        print MYID, "----------- WAITING FOR PROCESSES TO COMPLETE ------------"
-        tot = housekeep.objects.count()
-        done = housekeep.objects(state = 'done').count()
-        while done < tot:
-            q = housekeep.objects(state = 'done').only('time')
-            done = q.count()
-            if done > 0:
-                pdone = 100. * done / tot
-                q = q.order_by('time')
-                first = q[0].time
-                q = q.order_by('-time')
-                last = q[0].time
-    #             print "DEBUG", first, last, (last-first).seconds
-                tdone = float((last-first).seconds)
-                ttot = tdone*tot / done
-                trem = ttot - tdone
-                print MYID, "%s still waiting: %d out of %d complete (%.3f%%). %.3f seconds complete, %.3f remaining (%.5f hours)" \
-                            % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot, pdone, tdone, trem, trem / 3600.0)
-            else:
-                print MYID, "%s still waiting; nothing done so far" % (datetime.datetime.now())
-            sys.stdout.flush()
-            time.sleep(WAITSLEEP)
-        print MYID, "----------- THE WAITING GAME IS OVER ------------"
-        sys.stdout.flush()
+        mongoo_wait(config.timeout)
 
     elif 'dev' == config.cmd:
         WAITSLEEP = 0
@@ -275,8 +285,12 @@ if __name__ == "__main__":
             mongoo_reset(source, dest)
             if hasattr(goo, 'reset'):
                 goo.reset(source, dest)
-        mongoo_init(source, dest, goo.KEY, query)
+        mongoo_init(source, dest, goo.KEY, query, config.chunk)
+        if hasattr(goo, 'init'):
+            goo.init(source, dest, MYID)
         mongoo_process(source, dest, goo.KEY, query, goo.process)
+        mongoo_wait()
+        mongoo_status()
 
     else:
         print "usage:"
