@@ -197,6 +197,7 @@ def mongoo_wait(timeout):
             break
         time.sleep(WAITSLEEP)
         print MYID, "%s still waiting: %d out of %d complete" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot)
+        sys.stdout.flush()
         done = housekeep.objects(state = 'done').count()
         if done != olddun:
             tstart = t
