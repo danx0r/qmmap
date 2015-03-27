@@ -7,6 +7,7 @@ import sys, os, time, datetime, importlib, argparse
 from enum import Enum
 # from datetime import datetime
 from urlparse import urlparse
+import pymongo
 import mongoengine as meng
 # from mongoengine.connection import get_db
 # from mongoengine import register_connection
@@ -64,10 +65,10 @@ def connect2db(col, uri):
     if connect2db_cnt:
         alias = col._class_name + "_"+ db
 #         print "DBG alias:", alias
-        con = meng.connect(db, alias=alias, host=uri)
+        con = meng.connect(db, alias=alias, host=uri, read_preference=pymongo.ReadPreference.NEAREST)
         switch_db(col, alias).__enter__()
     else:
-        con = meng.connect(db, host=uri)
+        con = meng.connect(db, host=uri, read_preference=pymongo.ReadPreference.NEAREST)
     connect2db_cnt += 1
     return con
 
