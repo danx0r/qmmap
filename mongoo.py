@@ -194,8 +194,8 @@ def mongoo_wait(timeout):
     while done < tot:
         t = time.time()
         if t - tstart > timeout:
-            print MYID, "WAITING TIMEOUT -- unfinished processes:", [x.id for x in housekeep.objects(state__ne = 'done')]
-            break
+            print MYID, "----------- WAITING TIMEOUT ----- unfinished processes:\n", [x.id for x in housekeep.objects(state__ne = 'done')]
+            return False
         q = housekeep.objects(state = 'done').only('time')
         done = q.count()
         if done > 0:
@@ -219,6 +219,7 @@ def mongoo_wait(timeout):
             tstart = t
             olddun = done
     print MYID, "----------- THE WAITING GAME IS OVER ------------"
+    return True
 
 if __name__ == "__main__":
     par = argparse.ArgumentParser(description = "Mongo Operations")
@@ -293,7 +294,9 @@ if __name__ == "__main__":
         mongoo_status()
 
     elif 'wait' == config.cmd:
-        mongoo_wait(config.timeout)
+        if not mongoo_wait(config.timeout):
+            t1()
+            exit(99)
 
     elif 'dev' == config.cmd:
         WAITSLEEP = 0
