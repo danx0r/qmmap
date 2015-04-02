@@ -196,10 +196,26 @@ def mongoo_wait(timeout):
         if t - tstart > timeout:
             print MYID, "WAITING TIMEOUT -- unfinished processes:", [x.id for x in housekeep.objects(state__ne = 'done')]
             break
+        q = housekeep.objects(state = 'done').only('time')
+        done = q.count()
+        if done > 0:
+            pdone = 100. * done / tot
+            q = q.order_by('time')
+            first = q[0].time
+            q = q.order_by('-time')
+            last = q[0].time
+#             print "DEBUG", first, last, (last-first).seconds
+            tdone = float((last-first).seconds)
+            ttot = tdone*tot / done
+            trem = ttot - tdone
+            print MYID, "%s still waiting: %d out of %d complete (%.3f%%). %.3f seconds complete, %.3f remaining (%.5f hours)" \
+                        % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot, pdone, tdone, trem, trem / 3600.0)
+        else:
+            print MYID, "%s still waiting; nothing done so far" % (datetime.datetime.now())
+        sys.stdout.flush()
         time.sleep(WAITSLEEP)
         print MYID, "%s still waiting: %d out of %d complete" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot)
         sys.stdout.flush()
-        done = housekeep.objects(state = 'done').count()
         if done != olddun:
             tstart = t
             olddun = done
