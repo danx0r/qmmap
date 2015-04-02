@@ -214,7 +214,6 @@ def mongoo_wait(timeout):
             print MYID, "%s still waiting; nothing done so far" % (datetime.datetime.now())
         sys.stdout.flush()
         time.sleep(WAITSLEEP)
-        print MYID, "%s still waiting: %d out of %d complete" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot)
         sys.stdout.flush()
         if done != olddun:
             tstart = t
