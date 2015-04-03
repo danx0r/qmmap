@@ -22,6 +22,7 @@ PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../") ) 
 sys.path.append(PYBASE)
 sys.path.append(os.getcwdu())
 from utils.pp import pp
+from sciClasses.index_fix import index_fix
 
 MIN_CHUNK_SIZE = 3
 MAX_CHUNK_SIZE = 600
@@ -78,8 +79,10 @@ def connect2db(col, uri):
 def mongoo_reset(srccol, destcol):
     print MYID, "dropping housekeeping collection:", housekeep._get_collection_name()
     housekeep.drop_collection()
+    index_fix(housekeep)
     print MYID, "dropping destination collection:", destcol
     destcol.drop_collection()
+    index_fix(destcol)
     time.sleep(1)
 #
 # set up housekeeping
