@@ -29,6 +29,8 @@ MAX_CHUNK_SIZE = 600
 
 MYID = "%05d-%s" % (os.getpid(), repr(time.time()*1000000)[-8:-2])
 
+NULL = open(os.devnull, "w")
+
 def t0():
     global T
     print MYID, "---PROFILING---"
@@ -136,7 +138,7 @@ def mongoo_init(srccol, destcol, key, query, chunks):
 #
 # Process what we can
 #
-def mongoo_process(srccol, destcol, key, query, cb):
+def mongoo_process(srccol, destcol, key, query, cb, verbose):
     while housekeep.objects(state = 'open').count():
         #
         # tricky pymongo stuff mongoengine doesn't support.
@@ -157,13 +159,18 @@ def mongoo_process(srccol, destcol, key, query, cb):
             cursor = srccol.objects(**query)
             print MYID, "%s mongo_process: %d elements in chunk %s-%s" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), cursor.count(), hko.start, hko.end)
             sys.stdout.flush()
+            if not verbose:
+                oldstdout = sys.stdout
+                sys.stdout = NULL
             hko.good, hko.bad, hko.log = cb(cursor, destcol, MYID)
+            if not verbose:
+                sys.stdout = oldstdout
             hko.state = 'done'
             hko.time = datetime.datetime.now()
             hko.save()
         else:
             print MYID, "race lost -- skipping"
-        print MYID, "sleep..."
+#         print MYID, "sleep..."
         sys.stdout.flush()
         time.sleep(WAITSLEEP)
     print MYID, "mongo_process over"
@@ -235,6 +242,7 @@ if __name__ == "__main__":
     par.add_argument("--multi", type=int, default = 1)
     par.add_argument("--sleep", type=float, default = 1)
     par.add_argument("--timeout", type=int, default = 10)
+    par.add_argument("--verbose", type=int, default = 1)
     config = par.parse_args()
 #     if len(sys.argv) > 1 and 'config=' in sys.argv[1]:
 #         config = importlib.import_module(sys.argv[1][7:])
@@ -284,14 +292,14 @@ if __name__ == "__main__":
     elif 'process' == config.cmd:
         if config.multi > 1:
             for i in range(config.multi):
-                do = "python %s %s %s %s %s --sleep=%d process &" % (sys.argv[0], 
+                do = "python %s %s %s %s %s --sleep %d --verbose %d process &" % (sys.argv[0], 
                     #why why why why why                                                 
-                    config.src_db.replace('$', "\\$"), config.source, config.dest_db.replace('$', "\\$"), config.dest, config.sleep)
+                    config.src_db.replace('$', "\\$"), config.source, config.dest_db.replace('$', "\\$"), config.dest, config.sleep, config.verbose)
                 print MYID, "doing:", do
                 sys.stdout.flush()
                 os.system(do)
         else:
-            mongoo_process(source, dest, goo.KEY, query, goo.process)
+            mongoo_process(source, dest, goo.KEY, query, goo.process, config.verbose)
 
     elif 'status' == config.cmd:
         mongoo_status()
