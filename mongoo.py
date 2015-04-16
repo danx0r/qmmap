@@ -92,8 +92,8 @@ def mongoo_reset(srccol, destcol):
 def mongoo_init(srccol, destcol, key, query, chunks):
     query = dict(query)                                 #this gets abused, avoid side fx
     if housekeep.objects.count() == 0:
-        print MYID, "initializing housekeeping for", housekeep._get_collection_name()
         q = srccol.objects(**query).only(key).order_by(key)
+        print MYID, "initializing %d entries, housekeeping for %s" % (q.count(), housekeep._get_collection_name())
     else:
         last = housekeep.objects().order_by('-start')[0].end
         print MYID, "last partition field in housekeep:", last
@@ -119,7 +119,9 @@ def mongoo_init(srccol, destcol, key, query, chunks):
         hk = housekeep()
         hk.start = getattr(q[0], key)
         hk.end =  getattr(q[min(chunk-1, tot-1)], key)
-        
+        if (hk.start == None or hk.end == None):
+            print >> sys.stderr, "ERROR: key field has None. start: %s end: %s" % (hk.start, hk.end)
+            raise Exception("key error")
         #calc total for this segment
         query[key + "__gte"] = hk.start
         query[key + "__lte"] = hk.end
