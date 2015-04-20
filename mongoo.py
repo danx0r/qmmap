@@ -78,17 +78,19 @@ def connect2db(col, uri):
 #
 # drop collections and reset
 #
-def mongoo_reset(srccol, destcol):
+def mongoo_reset(srccol, destcol=None):
     print MYID, "dropping housekeeping collection:", housekeep._get_collection_name()
     housekeep.drop_collection()
     index_fix(housekeep)
-    print MYID, "dropping destination collection:", destcol
-    destcol.drop_collection()
-    index_fix(destcol)
+    if destcol:
+        print MYID, "dropping destination collection:", destcol
+        destcol.drop_collection()
+        index_fix(destcol)
     time.sleep(1)
 #
 # set up housekeeping
 #
+#FIXME: destcol not used
 def mongoo_init(srccol, destcol, key, query, chunks):
     query = dict(query)                                 #this gets abused, avoid side fx
     if housekeep.objects.count() == 0:
@@ -286,6 +288,13 @@ if __name__ == "__main__":
             if hasattr(goo, 'reset'):
                 goo.reset(source, dest, MYID)
 
+    if 'reset_keepdest' == config.cmd:
+        print MYID, "drop housekeep(%s) at %s, sure?" % (hk_colname, config.dest_db)
+        if raw_input()[:1] == 'y':
+            mongoo_reset(source, None)
+            if hasattr(goo, 'reset'):
+                goo.reset(source, dest, MYID)
+
     elif 'init' == config.cmd:
         mongoo_init(source, dest, goo.KEY, query, config.chunk)
         if hasattr(goo, 'init'):
@@ -294,6 +303,7 @@ if __name__ == "__main__":
     elif 'process' == config.cmd:
         if config.multi > 1:
             for i in range(config.multi):
+                #FIXME -- sleep takes %d but is a float. Might slow things down to fix
                 do = "python %s %s %s %s %s --sleep %d --verbose %d process &" % (sys.argv[0], 
                     #why why why why why                                                 
                     config.src_db.replace('$', "\\$"), config.source, config.dest_db.replace('$', "\\$"), config.dest, config.sleep, config.verbose)
