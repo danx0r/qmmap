@@ -288,7 +288,7 @@ if __name__ == "__main__":
             if hasattr(goo, 'reset'):
                 goo.reset(source, dest, MYID)
 
-    if 'reset_keepdest' == config.cmd:
+    elif 'reset_keepdest' == config.cmd:
         print MYID, "drop housekeep(%s) at %s, sure?" % (hk_colname, config.dest_db)
         if raw_input()[:1] == 'y':
             mongoo_reset(source, None)
