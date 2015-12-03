@@ -199,7 +199,7 @@ def mongoo_status():
                 print MYID, "----------------------------------------"
     print MYID, "total good: %d bad: %d sum: %d expected total: %d" % (good, bad, good+bad, tot)         
 
-def mongoo_wait(timeout):
+def mongoo_wait(timeout, srccol, destcol, key, query, cb, verbose):
     print MYID, "----------- WAITING FOR PROCESSES TO COMPLETE ------------"
     tot = housekeep.objects.count()
     done = housekeep.objects(state = 'done').count()
@@ -209,7 +209,18 @@ def mongoo_wait(timeout):
         t = time.time()
         if t - tstart > timeout:
             print MYID, "----------- WAITING TIMEOUT ----- unfinished processes:\n", [x.id for x in housekeep.objects(state__ne = 'done')]
-            return False
+            for x in housekeep.objects(state__ne = 'done'):
+                x.state = "open"
+                x.save()
+            print MYID, "reset processes:\n", [(x.id, x.state) for x in housekeep.objects(state__ne = 'done')]
+            print MYID, "attempting to reprocess dead PIDs:"
+            mongoo_process(srccol, destcol, key, query, cb, verbose)
+            done = housekeep.objects(state = 'done').only('time').count()
+            print MYID, "%s reprocessing finished: %d out of %d done" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot)
+            if done != tot:
+                sys.stdout.flush()
+                print MYID, "%s returning False from mongoo_wait" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot)
+                return False
         q = housekeep.objects(state = 'done').only('time')
         done = q.count()
         if done > 0:
@@ -317,7 +328,7 @@ if __name__ == "__main__":
         mongoo_status()
 
     elif 'wait' == config.cmd:
-        if not mongoo_wait(config.timeout):
+        if not mongoo_wait(config.timeout, source, dest, goo.KEY, query, goo.process, config.verbose):
             t1()
             exit(99)
 
