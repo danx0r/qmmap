@@ -1,4 +1,4 @@
-#
+#!/usr/bin/env python
 # mongo Operations
 #
 # mongoo.py src_db source dest_db dest cmd
