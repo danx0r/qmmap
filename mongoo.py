@@ -56,7 +56,8 @@ class housekeep(meng.Document):
     log = meng.ListField()                              # log of misery -- each item a failed processing incident
     state = StringEnumField(hkstate, default = 'open')
     git = meng.StringField()                                 # git commit of this version of source_destination
-    time = meng.DateTimeField()
+    tstart = meng.DateTimeField()  # Time when job started
+    time = meng.DateTimeField()  # Time when job finished
     meta = {'indexes': ['state', 'time']}
 
 connect2db_cnt = 0
@@ -158,15 +159,25 @@ def mongoo_process(srccol, destcol, key, query, cb, verbose):
         # find an open chunk, update it to state=working
         # must be done atomically to avoid contention with other processes
         #
-        # update housekeep.state with find and modify
-        raw = housekeep._collection.find_and_modify({'state': 'open'}, {'$set': {'state': 'working'}})
+        # update housekeep.state and .tstart with find and modify
+        tnow = datetime.datetime.now()
+        raw = housekeep._collection.find_and_modify(
+            {'state': 'open'},
+            {
+                '$set': {
+                    'state': 'working',
+                    'tstart': tnow,
+                }
+            }
+        )
         #if raw==None, someone scooped us
         if raw != None:
             #reload as mongoengine object -- _id is .start (because set as primary_key)
             hko = housekeep.objects(start = raw['_id'])[0]
-            #record git commit for sanity
+            # Record git commit for sanity
             hko.git = git.Git('.').rev_parse('HEAD')
-            #get data pointed to by housekeep
+            hko.save()
+            # get data pointed to by housekeep
             query[key + "__gte"] = hko.start
             query[key + "__lte"] = hko.end
             cursor = srccol.objects(**query)
@@ -175,6 +186,7 @@ def mongoo_process(srccol, destcol, key, query, cb, verbose):
             if not verbose:
                 oldstdout = sys.stdout
                 sys.stdout = NULL
+            # This is where processing happens
             hko.good, hko.bad, hko.log = cb(cursor, destcol, MYID)
             if not verbose:
                 sys.stdout = oldstdout
@@ -185,7 +197,7 @@ def mongoo_process(srccol, destcol, key, query, cb, verbose):
             print MYID, "race lost -- skipping"
 #         print MYID, "sleep..."
         sys.stdout.flush()
-        time.sleep(WAITSLEEP)
+        time.sleep(0.05)
     print MYID, "mongo_process over"
 
 def mongoo_status():
@@ -208,7 +220,31 @@ def mongoo_status():
                 print MYID, "----------------------------------------"
     print MYID, "total good: %d bad: %d sum: %d expected total: %d" % (good, bad, good+bad, tot)         
 
-def mongoo_wait(timeout, srccol, destcol, key, query, cb, verbose):
+
+def _print_progress():
+    q = housekeep.objects(state = 'done').only('time')
+    tot = housekeep.objects.count()
+    done = q.count()
+    if done > 0:
+        pdone = 100. * done / tot
+        q = q.order_by('time')
+        first = q[0].time
+        q = q.order_by('-time')
+        last = q[0].time
+        if first and last:  # guard against lacking values
+            tdone = float((last-first).seconds)
+            ttot = tdone*tot / done
+            trem = ttot - tdone
+            print "%s %s still waiting: %d out of %d complete (%.3f%%). %.3f seconds complete, %.3f remaining (%.5f hours)" \
+            % (MYID, datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot, pdone, tdone, trem, trem / 3600.0)
+        else:
+            print "No progress data yet"
+    else:
+        print "%s %s still waiting; nothing done so far" % (MYID, datetime.datetime.now())
+    sys.stdout.flush()
+
+
+def mongoo_wait(timeout):
     print MYID, "----------- WAITING FOR PROCESSES TO COMPLETE ------------"
     tot = housekeep.objects.count()
     done = housekeep.objects(state = 'done').count()
@@ -230,30 +266,59 @@ def mongoo_wait(timeout, srccol, destcol, key, query, cb, verbose):
                 sys.stdout.flush()
                 print MYID, "%s returning False from mongoo_wait" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot)
                 return False
-        q = housekeep.objects(state = 'done').only('time')
-        done = q.count()
-        if done > 0:
-            pdone = 100. * done / tot
-            q = q.order_by('time')
-            first = q[0].time
-            q = q.order_by('-time')
-            last = q[0].time
-#             print "DEBUG", first, last, (last-first).seconds
-            tdone = float((last-first).seconds)
-            ttot = tdone*tot / done
-            trem = ttot - tdone
-            print MYID, "%s still waiting: %d out of %d complete (%.3f%%). %.3f seconds complete, %.3f remaining (%.5f hours)" \
-                        % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot, pdone, tdone, trem, trem / 3600.0)
-        else:
-            print MYID, "%s still waiting; nothing done so far" % (datetime.datetime.now())
-        sys.stdout.flush()
+        _print_progress()
         time.sleep(WAITSLEEP)
         sys.stdout.flush()
         if done != olddun:
             tstart = t
             olddun = done
     print MYID, "----------- THE WAITING GAME IS OVER ------------"
-    return True
+
+
+def _num_at_state(state):
+    """Helper for consisely counting the number of housekeeping objects at a
+given state
+    """
+    return housekeep.objects(state=state).count()
+
+
+def mongoo_manage(sleep, timeout):
+    """Give periodic status, reopen dead jobs, return success when over;
+    combination of wait, status, clean, and the reprocessing functions.
+    sleep = time (sec) between status updates
+    timeout = time (sec) to give a job until it's restarted
+    """
+    num_done = _num_at_state('done')
+    print "Managing job's execution; currently {0} done".format(num_done)
+    sys.stdout.flush()
+    # Keep going until none are state=working or done
+    while _num_at_state('open') > 0 or _num_at_state('working') > 0:
+        # Sleep before management step
+        time.sleep(sleep)
+        _print_progress()
+        # Now, iterate over state=working jobs, restart ones that have gone
+        # on longer than the timeout param
+        tnow = datetime.datetime.now()  # get time once instead of repeating
+        # Iterate through working objects to see if it's too long
+        hkwquery = housekeep.objects(state='working').only('tstart', 'start')
+        for hkw in hkwquery:
+            # .tstart must have time value for state to equal 'working' at all
+            # See mongoo_process
+            time_taken = (tnow-hkw.tstart).total_seconds()
+            print u"Chunk starting at {0} has been working for {1} sec".format(
+                hkw.start, time_taken)
+            sys.stdout.flush()
+            if time_taken > timeout:
+                print (u"More than {0} sec spent on chunk {1} ;" +
+                    u" setting status back to open").format(
+                    timeout, hkw.start)
+                sys.stdout.flush()
+                hkw.state = "open"
+                hkw.save()
+    print MYID, "----------- PROCESSING COMPLETED ------------"
+    mongoo_status()
+
+
 
 if __name__ == "__main__":
     par = argparse.ArgumentParser(description = "Mongo Operations")
@@ -281,7 +346,7 @@ if __name__ == "__main__":
     print "MYID:", MYID
     print MYID, "CMD:", sys.argv
     src_dest = config.source + "_" + config.dest
-    goo = importlib.import_module(src_dest)
+    goo = importlib.import_module("process_data." + src_dest)
     source = getattr(goo, config.source)
     dest = getattr(goo, config.dest)
     WAITSLEEP = config.sleep
@@ -347,6 +412,9 @@ if __name__ == "__main__":
             if not mongoo_wait(config.timeout):
                 t1()
                 exit(99)
+
+    elif 'manage' == config.cmd:
+        mongoo_manage(config.sleep, config.timeout)
 
     elif 'status' == config.cmd:
         mongoo_status()
