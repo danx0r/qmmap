@@ -1,4 +1,4 @@
-#
+#!/usr/bin/env python
 # mongo Operations
 #
 # mongoo.py src_db source dest_db dest cmd
@@ -86,6 +86,15 @@ def mongoo_reset(srccol, destcol=None):
         print MYID, "dropping destination collection:", destcol
         destcol.drop_collection()
         index_fix(destcol)
+    time.sleep(1)
+#
+# Clean housekeeping -- reset unfinished chunks
+#
+def mongoo_clean():
+    print MYID, "cleaning housekeeping collection:", housekeep._get_collection_name()
+    q = housekeep.objects(state__ne = "done")
+    n = q.update(set__state = "open", multi = True)
+    print MYID, "updated %d objects to state=open" % n
     time.sleep(1)
 #
 # set up housekeeping
@@ -258,6 +267,7 @@ if __name__ == "__main__":
     par.add_argument("--sleep", type=float, default = 1)
     par.add_argument("--timeout", type=int, default = 10)
     par.add_argument("--verbose", type=int, default = 1)
+    par.add_argument("--wait_and_reprocess", action = "store_true")
     config = par.parse_args()
 #     if len(sys.argv) > 1 and 'config=' in sys.argv[1]:
 #         config = importlib.import_module(sys.argv[1][7:])
@@ -312,17 +322,31 @@ if __name__ == "__main__":
             goo.init(source, dest, MYID)
         
     elif 'process' == config.cmd:
-        if config.multi > 1:
-            for i in range(config.multi):
-                #FIXME -- sleep takes %d but is a float. Might slow things down to fix
-                do = "python %s %s %s %s %s --sleep %d --verbose %d process &" % (sys.argv[0], 
-                    #why why why why why                                                 
-                    config.src_db.replace('$', "\\$"), config.source, config.dest_db.replace('$', "\\$"), config.dest, config.sleep, config.verbose)
-                print MYID, "doing:", do
-                sys.stdout.flush()
-                os.system(do)
+        #either simple process or wait, check, reproc & wait again if necessary
+        do = False
+        if not config.wait_and_reprocess:
+            do = True
         else:
-            mongoo_process(source, dest, goo.KEY, query, goo.process, config.verbose)
+            done = mongoo_wait(config.timeout)
+            if not done:
+                mongoo_clean()
+                do = True
+        if do:
+            if config.multi > 1:
+                for i in range(config.multi):
+                    #FIXME -- sleep takes %d but is a float. Might slow things down to fix
+                    do = "python %s %s %s %s %s --sleep %d --verbose %d process &" % (sys.argv[0], 
+                        #why why why why why                                                 
+                        config.src_db.replace('$', "\\$"), config.source, config.dest_db.replace('$', "\\$"), config.dest, config.sleep, config.verbose)
+                    print MYID, "doing:", do
+                    sys.stdout.flush()
+                    os.system(do)
+            else:
+                mongoo_process(source, dest, goo.KEY, query, goo.process, config.verbose)
+        if config.wait_and_reprocess:
+            if not mongoo_wait(config.timeout):
+                t1()
+                exit(99)
 
     elif 'status' == config.cmd:
         mongoo_status()
