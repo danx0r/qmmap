@@ -416,14 +416,6 @@ if __name__ == "__main__":
     elif 'manage' == config.cmd:
         mongoo_manage(config.sleep, config.timeout)
 
-    elif 'status' == config.cmd:
-        mongoo_status()
-
-    elif 'wait' == config.cmd:
-        if not mongoo_wait(config.timeout, source, dest, goo.KEY, query, goo.process, config.verbose):
-            t1()
-            exit(99)
-
     elif 'dev' == config.cmd:
         WAITSLEEP = 0
         print MYID, "drop housekeep(%s) and %s at %s, sure?" % (hk_colname, config.dest, config.dest_db)
@@ -443,8 +435,8 @@ if __name__ == "__main__":
         print "mongoo.py reset   #erase all destination data for complete reprocessing"
         print "mongoo.py init    #initialize for processing"
         print "mongoo.py process #process data"
+        print "mongoo.py manage  #monitor progress, retry dead jobs"
         print "mongoo.py dev     #reset, init, process in single thread for development tests"
-        print "mongoo.py status"
         exit()
         
     t1()

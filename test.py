@@ -5,5 +5,3 @@ os.system("echo y | python mongoo.py mongodb://127.0.0.1/local_db goosrc . goode
 os.system("python mongoo.py mongodb://127.0.0.1/local_db goosrc . goodest init")
 os.system("python mongoo.py mongodb://127.0.0.1/local_db goosrc . goodest process")
 os.system("python mongoo.py mongodb://127.0.0.1/local_db goosrc . goodest manage")
-# os.system("python mongoo.py mongodb://127.0.0.1/local_db goosrc . goodest wait --timeout 5")
-# os.system("python mongoo.py mongodb://127.0.0.1/local_db goosrc . goodest status")
