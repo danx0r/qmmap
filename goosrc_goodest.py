@@ -54,7 +54,7 @@ def process(source, dest, myid):
             print myid, "INEXPLICABLE FAIL"
             exit()
         try:
-            if True:#x.num != 12:
+            if x.num != 24:
                 print myid, "    goosrc_goodest.process:", x.num
                 sys.stdout.flush()
                 d = dest()
