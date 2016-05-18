@@ -16,13 +16,13 @@ from mongoengine.context_managers import switch_collection
 from extras_mongoengine.fields import StringEnumField
 import git
 
-#we need class defs from science (at least for pp)
-# PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../science") )     #science is parallel
-PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../") )        #we are located in science/venv/src
-sys.path.append(PYBASE)
-sys.path.append(os.getcwdu())
-from utils.pp import pp
-from sciClasses.index_fix import index_fix
+# #we need class defs from science (at least for pp)
+# # PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../science") )     #science is parallel
+# PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../") )        #we are located in science/venv/src
+# sys.path.append(PYBASE)
+# sys.path.append(os.getcwdu())
+# from utils.pp import pp
+# from sciClasses.index_fix import index_fix
 
 MIN_CHUNK_SIZE = 3
 MAX_CHUNK_SIZE = 600
@@ -82,11 +82,11 @@ def connect2db(col, uri):
 def mongoo_reset(srccol, destcol=None):
     print MYID, "dropping housekeeping collection:", housekeep._get_collection_name()
     housekeep.drop_collection()
-    index_fix(housekeep)
+#     index_fix(housekeep)
     if destcol:
         print MYID, "dropping destination collection:", destcol
         destcol.drop_collection()
-        index_fix(destcol)
+#         index_fix(destcol)
     time.sleep(1)
 #
 # Clean housekeeping -- reset unfinished chunks
