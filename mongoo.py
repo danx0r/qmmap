@@ -269,7 +269,7 @@ def mongoo_manage(sleep, timeout):
         # on longer than the timeout param
         tnow = datetime.datetime.now()  # get time once instead of repeating
         # Iterate through working objects to see if it's too long
-        hkwquery = housekeep.objects(state='working').only('tstart', 'start')
+        hkwquery = housekeep.objects(state='working')  #.only('tstart', 'start') see OPS-174
         for hkw in hkwquery:
             # .tstart must have time value for state to equal 'working' at all
             # See mongoo_process

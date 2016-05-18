@@ -50,9 +50,9 @@ def process(source, dest, myid):
     good = bad = 0
     print myid, "  process %d from" % source.count(), source._collection, "to", dest.objects._collection
     for x in source:
-#         if random.random() < .2:         #emulate untrapped segfault/lost or dead process. It happens
-#             print "INEXPLICABLE FAIL"
-#             exit()
+        if random.random() < .2:         #emulate untrapped segfault/lost or dead process. It happens
+            print myid, "INEXPLICABLE FAIL"
+            exit()
         try:
             if True:#x.num != 12:
                 print myid, "    goosrc_goodest.process:", x.num
