@@ -284,6 +284,7 @@ def mongoo_manage(sleep, timeout):
                 sys.stdout.flush()
                 hkw.state = "open"
                 hkw.save()
+    time.sleep(5)
     print MYID, "----------- PROCESSING COMPLETED ------------"
     mongoo_status()
 
