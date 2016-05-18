@@ -1,31 +1,9 @@
 #!/usr/bin/python
 import os
-os.system("rm log1 log2 log3 log4")
 os.system("echo y | python make_goosrc.py mongodb://127.0.0.1/local_db 30")
 os.system("echo y | python mongoo.py mongodb://127.0.0.1/local_db goosrc . goodest reset")
 os.system("python mongoo.py mongodb://127.0.0.1/local_db goosrc . goodest init")
-os.system("python mongoo.py mongodb://127.0.0.1/local_db goosrc . goodest process > log1 2>&1 &")
-os.system("python mongoo.py mongodb://127.0.0.1/local_db goosrc . goodest process > log2 2>&1 &")
-os.system("python mongoo.py mongodb://127.0.0.1/local_db goosrc . goodest wait")
-print "----LOG1----"
-os.system("cat log1")
-print
-print "----LOG2----"
-os.system("cat log2")
-print
-print "------------"
-os.system("echo y | python make_goosrc.py mongodb://127.0.0.1/local_db 50")
-os.system("python mongoo.py mongodb://127.0.0.1/local_db goosrc . goodest init")
-os.system("python mongoo.py mongodb://127.0.0.1/local_db goosrc . goodest process > log3 2>&1 &")
-os.system("python mongoo.py mongodb://127.0.0.1/local_db goosrc . goodest process > log4 2>&1 &")
-os.system("python mongoo.py mongodb://127.0.0.1/local_db goosrc . goodest wait")
-print
-print "----LOG3----"
-os.system("cat log3")
-print
-print "----LOG4----"
-os.system("cat log4")
-print
-print
-print
-os.system("python mongoo.py mongodb://127.0.0.1/local_db goosrc . goodest status")
+os.system("python mongoo.py mongodb://127.0.0.1/local_db goosrc . goodest process")
+# os.system("python mongoo.py mongodb://127.0.0.1/local_db goosrc . goodest process > log2 2>&1 &")
+# os.system("python mongoo.py mongodb://127.0.0.1/local_db goosrc . goodest wait --timeout 5")
+# os.system("python mongoo.py mongodb://127.0.0.1/local_db goosrc . goodest status")

@@ -23,5 +23,9 @@ if raw_input("drop goosrc?")[:1] == 'y':
 for i in range(0, int(config.num), 3):
     g = goosrc(num = i)
     g.save()
-
+    if i == 6:
+        g = goosrc(num = i)
+        g.save()
+        g = goosrc(num = i)
+        g.save()
 print "created %d objects" % goosrc.objects.count()
