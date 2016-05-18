@@ -153,7 +153,8 @@ def mongoo_init(srccol, destcol, key, query, chunks):
 # Process what we can
 #
 def mongoo_process(srccol, destcol, key, query, cb, verbose):
-    while housekeep.objects(state = 'open').count():
+    alldone = housekeep.objects.count()
+    while housekeep.objects(state = 'done').count() != alldone:
         #
         # tricky pymongo stuff mongoengine doesn't support.
         # find an open chunk, update it to state=working
@@ -197,7 +198,7 @@ def mongoo_process(srccol, destcol, key, query, cb, verbose):
             print MYID, "race lost -- skipping"
 #         print MYID, "sleep..."
         sys.stdout.flush()
-        time.sleep(.05)
+        time.sleep(WAITSLEEP)
     print MYID, "mongo_process over"
 
 def mongoo_status():
