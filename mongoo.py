@@ -197,7 +197,7 @@ def mongoo_process(srccol, destcol, key, query, cb, verbose):
             print MYID, "race lost -- skipping"
 #         print MYID, "sleep..."
         sys.stdout.flush()
-        time.sleep(0.05)
+        time.sleep(.05)
     print MYID, "mongo_process over"
 
 def mongoo_status():
@@ -238,7 +238,7 @@ def _print_progress():
             print "%s %s still waiting: %d out of %d complete (%.3f%%). %.3f seconds complete, %.3f remaining (%.5f hours)" \
             % (MYID, datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot, pdone, tdone, trem, trem / 3600.0)
         else:
-            print "No progress data yet"
+            print MYID, "No progress data yet"
     else:
         print "%s %s still waiting; nothing done so far" % (MYID, datetime.datetime.now())
     sys.stdout.flush()
@@ -289,7 +289,7 @@ def mongoo_manage(sleep, timeout):
     timeout = time (sec) to give a job until it's restarted
     """
     num_done = _num_at_state('done')
-    print "Managing job's execution; currently {0} done".format(num_done)
+    print MYID, "Managing job's execution; currently {0} done".format(num_done)
     sys.stdout.flush()
     # Keep going until none are state=working or done
     while _num_at_state('open') > 0 or _num_at_state('working') > 0:
@@ -305,11 +305,11 @@ def mongoo_manage(sleep, timeout):
             # .tstart must have time value for state to equal 'working' at all
             # See mongoo_process
             time_taken = (tnow-hkw.tstart).total_seconds()
-            print u"Chunk starting at {0} has been working for {1} sec".format(
+            print MYID, u"Chunk starting at {0} has been working for {1} sec".format(
                 hkw.start, time_taken)
             sys.stdout.flush()
             if time_taken > timeout:
-                print (u"More than {0} sec spent on chunk {1} ;" +
+                print MYID, (u"More than {0} sec spent on chunk {1} ;" +
                     u" setting status back to open").format(
                     timeout, hkw.start)
                 sys.stdout.flush()

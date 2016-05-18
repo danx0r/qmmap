@@ -1,7 +1,7 @@
 #
 # Template mongoo processing script
 #
-import sys, os, time, traceback
+import sys, os, time, random, traceback
 import mongoengine as meng
 # PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../science") ) 
 # sys.path.append(PYBASE)
@@ -43,18 +43,16 @@ QUERY = {'num__ne': 9}
 # source is mongoengine cursor; dest is mongoengine object class
 # both are associated with db connections
 #
-iterations = 0
 def process(source, dest, myid):
     global iterations
-    iterations += 1
     time.sleep(2)                   #just for testing
     log = []
     good = bad = 0
     print myid, "  process %d from" % source.count(), source._collection, "to", dest.objects._collection
     for x in source:
-        if iterations == 11111:         #emulate untrapped segfault/lost or dead process. It happens
-            print "INEXPLICABLE FAIL"
-            exit()
+#         if random.random() < .2:         #emulate untrapped segfault/lost or dead process. It happens
+#             print "INEXPLICABLE FAIL"
+#             exit()
         try:
             if True:#x.num != 12:
                 print myid, "    goosrc_goodest.process:", x.num
