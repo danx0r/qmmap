@@ -288,7 +288,6 @@ def mongoo_manage(sleep, timeout):
     mongoo_status()
 
 
-
 if __name__ == "__main__":
     par = argparse.ArgumentParser(description = "Mongo Operations")
     par.add_argument("src_db")
