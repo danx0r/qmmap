@@ -244,38 +244,6 @@ def _print_progress():
         print "%s %s still waiting; nothing done so far" % (MYID, datetime.datetime.now())
     sys.stdout.flush()
 
-
-def mongoo_wait(timeout):
-    print MYID, "----------- WAITING FOR PROCESSES TO COMPLETE ------------"
-    tot = housekeep.objects.count()
-    done = housekeep.objects(state = 'done').count()
-    tstart = time.time()
-    olddun = done
-    while done < tot:
-        t = time.time()
-        if t - tstart > timeout:
-            print MYID, "----------- WAITING TIMEOUT ----- unfinished processes:\n", [x.id for x in housekeep.objects(state__ne = 'done')]
-            for x in housekeep.objects(state__ne = 'done'):
-                x.state = "open"
-                x.save()
-            print MYID, "reset processes:\n", [(x.id, x.state) for x in housekeep.objects(state__ne = 'done')]
-            print MYID, "attempting to reprocess dead PIDs:"
-            mongoo_process(srccol, destcol, key, query, cb, verbose)
-            done = housekeep.objects(state = 'done').only('time').count()
-            print MYID, "%s reprocessing finished: %d out of %d done" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot)
-            if done != tot:
-                sys.stdout.flush()
-                print MYID, "%s returning False from mongoo_wait" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot)
-                return False
-        _print_progress()
-        time.sleep(WAITSLEEP)
-        sys.stdout.flush()
-        if done != olddun:
-            tstart = t
-            olddun = done
-    print MYID, "----------- THE WAITING GAME IS OVER ------------"
-
-
 def _num_at_state(state):
     """Helper for consisely counting the number of housekeeping objects at a
 given state
