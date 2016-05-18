@@ -346,7 +346,7 @@ if __name__ == "__main__":
     print "MYID:", MYID
     print MYID, "CMD:", sys.argv
     src_dest = config.source + "_" + config.dest
-    goo = importlib.import_module("process_data." + src_dest)
+    goo = importlib.import_module(src_dest)
     source = getattr(goo, config.source)
     dest = getattr(goo, config.dest)
     WAITSLEEP = config.sleep

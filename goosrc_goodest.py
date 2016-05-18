@@ -48,14 +48,14 @@ def process(source, dest, myid):
     good = bad = 0
     print myid, "  process %d from" % source.count(), source._collection, "to", dest.objects._collection
     for x in source:
-        if x.num == 27:         #emulate untrapped segfault/lost or dead process. It happens
-            exit()
+#         if x.num == 27:         #emulate untrapped segfault/lost or dead process. It happens
+#             exit()
         try:
-            if x.num != 12:
+            if True:#x.num != 12:
                 print myid, "    goosrc_goodest.process:", x.num
                 sys.stdout.flush()
                 d = dest()
-                d.numnum = str(x.num*2)
+                d.numnum = str(x.num*10)
                 d.save()
             else:
                 print myid, "    goosrc_goodest: skipping", x.num
