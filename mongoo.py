@@ -74,7 +74,7 @@ def connect2db(col, uri):
     else:
         con = meng.connect(db, host=uri, read_preference=pymongo.ReadPreference.NEAREST)
     connect2db_cnt += 1
-    return con
+    return con[db]
 
 #
 # drop collections and reset
