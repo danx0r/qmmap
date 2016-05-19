@@ -50,8 +50,7 @@ def process(source, dest, myid):
     print myid, "  process %d from" % source.count(), source._collection, "to", dest.objects._collection
     for x in source:
         dbg1 = source._collection.database.test_mongoo.find_and_modify({'_id':'dbg1'}, {'$inc':{'n':1}})['n']
-        print myid, "dbg1:", dbg1
-        if random.random() < .05:         #emulate untrapped segfault/lost or dead process. It happens
+        if dbg1 == 11:               #emulate untrapped segfault/lost or dead process. It happens
             print myid, "INEXPLICABLE FAIL"
             exit()
         try:
