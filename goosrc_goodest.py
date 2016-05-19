@@ -44,12 +44,13 @@ QUERY = {'num__ne': 9}
 # both are associated with db connections
 #
 def process(source, dest, myid):
-    global iterations
     time.sleep(2)                   #just for testing
     log = []
     good = bad = 0
     print myid, "  process %d from" % source.count(), source._collection, "to", dest.objects._collection
     for x in source:
+        dbg1 = source._collection.database.test_mongoo.find_and_modify({'_id':'dbg1'}, {'$inc':{'n':1}})['n']
+        print myid, "dbg1:", dbg1
         if random.random() < .05:         #emulate untrapped segfault/lost or dead process. It happens
             print myid, "INEXPLICABLE FAIL"
             exit()

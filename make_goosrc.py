@@ -32,4 +32,4 @@ for i in range(0, int(config.num), 3):
 print "created %d objects" % goosrc.objects.count()
 
 #for debug tests
-db.debug.save({'_id':'dbg1','n':1})
+db.test_mongoo.save({'_id':'dbg1','n':1})
