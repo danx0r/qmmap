@@ -284,7 +284,7 @@ def mongoo_manage(sleep, timeout):
                 sys.stdout.flush()
                 hkw.state = "open"
                 hkw.save()
-    time.sleep(5)
+    time.sleep(2.5)
     print MYID, "----------- PROCESSING COMPLETED ------------"
     mongoo_status()
 
@@ -301,7 +301,6 @@ if __name__ == "__main__":
     par.add_argument("--sleep", type=float, default = 1)
     par.add_argument("--timeout", type=int, default = 10)
     par.add_argument("--verbose", type=int, default = 1)
-    par.add_argument("--wait_and_reprocess", action = "store_true")
     config = par.parse_args()
 #     if len(sys.argv) > 1 and 'config=' in sys.argv[1]:
 #         config = importlib.import_module(sys.argv[1][7:])
@@ -323,8 +322,8 @@ if __name__ == "__main__":
     print MYID, "source database, collection:", config.src_db, source
     print MYID, "destination database, collection:", config.dest_db, dest
     
-    connect2db(source, config.src_db)
-    connect2db(dest, config.dest_db)
+#     connect2db(source, config.src_db)
+#     connect2db(dest, config.dest_db)
     connect2db(housekeep, config.dest_db)
     hk_colname = source._class_name + '_' + dest._class_name
     switch_collection(housekeep, hk_colname).__enter__()
@@ -356,31 +355,17 @@ if __name__ == "__main__":
             goo.init(source, dest, MYID)
         
     elif 'process' == config.cmd:
-        #either simple process or wait, check, reproc & wait again if necessary
-        do = False
-        if not config.wait_and_reprocess:
-            do = True
+        if config.multi > 1:
+            for i in range(config.multi):
+                #FIXME -- sleep takes %d but is a float. Might slow things down to fix
+                do = "python %s %s %s %s %s --sleep %d --verbose %d process &" % (sys.argv[0], 
+                    #why why why why why                                                 
+                    config.src_db.replace('$', "\\$"), config.source, config.dest_db.replace('$', "\\$"), config.dest, config.sleep, config.verbose)
+                print MYID, "doing:", do
+                sys.stdout.flush()
+                os.system(do)
         else:
-            done = mongoo_wait(config.timeout)
-            if not done:
-                mongoo_clean()
-                do = True
-        if do:
-            if config.multi > 1:
-                for i in range(config.multi):
-                    #FIXME -- sleep takes %d but is a float. Might slow things down to fix
-                    do = "python %s %s %s %s %s --sleep %d --verbose %d process &" % (sys.argv[0], 
-                        #why why why why why                                                 
-                        config.src_db.replace('$', "\\$"), config.source, config.dest_db.replace('$', "\\$"), config.dest, config.sleep, config.verbose)
-                    print MYID, "doing:", do
-                    sys.stdout.flush()
-                    os.system(do)
-            else:
-                mongoo_process(source, dest, goo.KEY, query, goo.process, config.verbose)
-        if config.wait_and_reprocess:
-            if not mongoo_wait(config.timeout):
-                t1()
-                exit(99)
+            mongoo_process(source, dest, goo.KEY, query, goo.process, config.verbose)
 
     elif 'manage' == config.cmd:
         mongoo_manage(config.sleep, config.timeout)
@@ -396,8 +381,7 @@ if __name__ == "__main__":
         if hasattr(goo, 'init'):
             goo.init(source, dest, MYID)
         mongoo_process(source, dest, goo.KEY, query, goo.process)
-        mongoo_wait()
-        mongoo_status()
+        mongoo_manage()
 
     else:
         print "usage:"
