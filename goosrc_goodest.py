@@ -16,9 +16,14 @@ class goodest(meng.Document):
     _id = meng.IntField(primary_key = True)
 
 def process(source, dest):
+    print "process %d documents from %s to %s" % (source.count(), source.collection.name, dest.name)
     meng.connect("test")
     for doc in source:
-        gs = goosrc.objects(_id = doc['_id'])[0]
+#         gs = goosrc.objects(_id = doc['_id'])[0]
+        gs = goosrc()
+        for key in doc:
+            if hasattr(gs, key) and key in doc:
+                gs[key] = doc[key]
         gd = goodest(id = gs.id * 10)
         gd.save()
 
