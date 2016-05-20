@@ -6,7 +6,7 @@ import pymongo
 #
 # source field to use for partitioning (must be unique and orderable)
 #
-KEY = 'num'
+KEY = '_id'
 #
 # optional query:
 #
@@ -32,7 +32,7 @@ def process(myid, keylist, source_uri, source_col, dest_uri, dest_col, *args, **
     dest = pymongo.MongoClient(dest_uri).get_default_database()[dest_col]
     for key in keylist:
         src = source.find_one({KEY: key})
-        dest.save({'numnum': src['num']*10})
+        dest.save({'_id': src[KEY]*10})
 
 if __name__ == "__main__":
-    process(1, [0, 3], "mongodb://127.0.0.1/local_db", "goosrc", "mongodb://127.0.0.1/local_db", "goodest")
+    process(1, [0, 3, 6], "mongodb://127.0.0.1/local_db", "goosrc", "mongodb://127.0.0.1/local_db", "goodest")

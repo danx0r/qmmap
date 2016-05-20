@@ -16,8 +16,5 @@ if raw_input("drop goosrc?")[:1] == 'y':
     db.goosrc.drop()
 
 for i in range(0, int(config.num), 3):
-    db.goosrc.save({'num': i})
+    db.goosrc.save({'_id': i})
 print "created %d objects" % db.goosrc.count()
-
-#for debug tests
-db.test_mongoo.save({'_id':'dbg1','n':1})
