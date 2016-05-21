@@ -1,8 +1,11 @@
 #
 # mongo Operations
 #
-import mongoengine as meng
+import sys
 import pymongo
+import mongoengine as meng
+
+print "mongoo.py imported from:", sys.argv[0]
 
 def process(cb,
             source_col, 
