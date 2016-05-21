@@ -2,6 +2,7 @@
 # mongo Operations
 #
 import os, urlparse
+import mongoengine as meng
 import pymongo
 
 def process(cb,
@@ -16,7 +17,14 @@ def process(cb,
     dest = dbd[dest_col]
     cb(source, dest)
     
-def toMongoEngine(pmobj, meobj):
+def toMongoEngine(pmobj, metype):
+    meobj = metype()
     for key in pmobj:
         if hasattr(meobj, key) and key in pmobj:
             meobj[key] = pmobj[key]
+    return meobj
+
+def connectMongoEngine(pmcol):
+    return meng.connect(pmcol.database.name,
+                        host=pmcol.database.client.HOST, 
+                        port=pmcol.database.client.PORT)

@@ -11,12 +11,9 @@ class goodest(meng.Document):
   
 def process(source, dest):
     print "process %d documents from %s to %s" % (source.count(), source.collection.name, dest.name)
-    meng.connect(dest.database.name,
-                 host=dest.database.client.HOST, 
-                 port=dest.database.client.PORT)
+    mongoo.connectMongoEngine(dest)
     for doc in source:
-        gs = goosrc()
-        mongoo.toMongoEngine(doc, gs)
+        gs = mongoo.toMongoEngine(doc, goosrc)
         gd = goodest(id = gs.id * 10)
         gd.save()
         print "  processed %s" % gs.id
