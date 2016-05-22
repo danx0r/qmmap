@@ -21,7 +21,7 @@ def process(source, dest):
 if __name__ == "__main__":
     import os, pymongo
     os.system("python make_goosrc.py mongodb://127.0.0.1/test 10")
-    mongoo.process(process, "goosrc", "goodest")
+    mongoo.process("goosrc", "goodest")
     db = pymongo.MongoClient("mongodb://127.0.0.1/test").get_default_database()
     print "output:"
     print list(db.goodest.find())

@@ -1,14 +1,14 @@
 #
 # mongo Operations
 #
-import sys
+import sys, importlib
 import pymongo
 import mongoengine as meng
 
-print "mongoo.py imported from:", sys.argv[0]
+# Ooh, it's magic, I know...
+caller = importlib.import_module(sys.argv[0][:-3])
 
-def process(cb,
-            source_col, 
+def process(source_col, 
             dest_col, 
             source_uri="mongodb://127.0.0.1/test", 
             dest_uri="mongodb://127.0.0.1/test",
@@ -17,7 +17,7 @@ def process(cb,
     dbd = pymongo.MongoClient(dest_uri).get_default_database()
     source = dbs[source_col].find(source_args)
     dest = dbd[dest_col]
-    cb(source, dest)
+    caller.process(source, dest)
     
 def toMongoEngine(pmobj, metype):
     meobj = metype()
