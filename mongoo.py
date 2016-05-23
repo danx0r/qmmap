@@ -27,6 +27,10 @@ def toMongoEngine(pmobj, metype):
     return meobj
 
 def connectMongoEngine(pmcol):
-    return meng.connect(pmcol.database.name,
-                        host=pmcol.database.client.HOST, 
-                        port=pmcol.database.client.PORT)
+    if pymongo.version[0] == 2:     #really? REALLY?
+        host = pmcol.database.connection.HOST
+        port = pmcol.database.connection.PORT
+    else:
+        host = pmcol.database.client.HOST
+        port = pmcol.database.client.PORT
+    return meng.connect(pmcol.database.name, host=host, port=port)
