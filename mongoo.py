@@ -1,9 +1,10 @@
 #
 # mongo Operations
 #
-import sys, importlib
+import sys, importlib, datetime, time
 import pymongo
 import mongoengine as meng
+from mongoengine.context_managers import switch_collection
 
 # Ooh, it's magic, I know...
 caller = importlib.import_module(sys.argv[0][:-3])
@@ -23,10 +24,13 @@ class housekeep(meng.Document):
 
 def mongoo_init(srccol, destcol, key, query, chunk_size):
     connectMongoEngine(destcol)
+    hk_colname = srccol.name + '_' + destcol.name
+    switch_collection(housekeep, hk_colname).__enter__()
     if housekeep.objects.count() == 0:
         q = srccol.find(query, [key]).sort([(key, pymongo.ASCENDING)])
         print "initializing %d entries, housekeeping for %s" % (q.count(), housekeep._get_collection_name())
     else:
+        print "DEEBG", hk_colname, housekeep.objects.count()
         raise Exception("no incremental yet")
 #         last = housekeep.objects().order_by('-start')[0].end
 #         print "last partition field in housekeep:", last
@@ -47,7 +51,7 @@ def mongoo_init(srccol, destcol, key, query, chunk_size):
             print >> sys.stderr, "ERROR: key field has None. start: %s end: %s" % (hk.start, hk.end)
             raise Exception("key error")
         #calc total for this segment
-        qq = {'$and': [query, {key: {'$gte': hk.start}}, {key: {'$lt': hk.end}}]}
+        qq = {'$and': [query, {key: {'$gte': hk.start}}, {key: {'$lte': hk.end}}]}
         hk.total = srccol.find(qq, [key]).count()
         hk.save()
 
@@ -61,16 +65,58 @@ def process(source_col,
             dest_col, 
             source_uri="mongodb://127.0.0.1/test", 
             dest_uri="mongodb://127.0.0.1/test",
-            source_args={},
+            query={},
+            key='_id',
+            verbose=True,
             multi=1):
     dbs = pymongo.MongoClient(source_uri).get_default_database()
     dbd = pymongo.MongoClient(dest_uri).get_default_database()
-    source = dbs[source_col].find(source_args)
+    source = dbs[source_col].find(query)
     dest = dbd[dest_col]
     if multi == 1:
         caller.process(source, dest)
     else:
-        mongoo_init(dbs[source_col], dbd[dest_col], '_id', source_args, 2)
+        mongoo_init(dbs[source_col], dbd[dest_col], key, query, 2)
+        while housekeep.objects(state = 'open').count():
+            tnow = datetime.datetime.utcnow()
+            raw = housekeep._collection.find_and_modify(
+                {'state': 'open'},
+                {
+                    '$set': {
+                        'state': 'working',
+                        'tstart': tnow,
+                    }
+                }
+            )
+            #if raw==None, someone scooped us
+            if raw != None:
+                #reload as mongoengine object -- _id is .start (because set as primary_key)
+                hko = housekeep.objects(start = raw['_id'])[0]
+                # Record git commit for sanity
+    #             hko.git = git.Git('.').rev_parse('HEAD')
+    #             hko.save()
+                # get data pointed to by housekeep
+                qq = {'$and': [query, {key: {'$gte': hko.start}}, {key: {'$lte': hko.end}}]}
+                cursor = dbs[source_col].find(qq)
+                print "%s mongo_process: %d elements in chunk %s-%s" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), cursor.count(), hko.start, hko.end)
+                sys.stdout.flush()
+                if not verbose:
+                    oldstdout = sys.stdout
+                    sys.stdout = NULL
+                # This is where processing happens
+    #             hko.good, hko.bad, hko.log = cb(cursor, dbd[dest_col])
+                caller.process(cursor, dbd[dest_col])
+                if not verbose:
+                    sys.stdout = oldstdout
+                hko.state = 'done'
+                hko.time = datetime.datetime.utcnow()
+                hko.save()
+            else:
+                print "race lost -- skipping"
+    #         print "sleep..."
+            sys.stdout.flush()
+            time.sleep(0.001)
+
     
 def toMongoEngine(pmobj, metype):
     meobj = metype()
