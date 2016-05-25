@@ -59,7 +59,6 @@ def mongoo_init(srccol, destcol, key, query, chunk_size):
         qq = {'$and': [query, {key: {'$gt': hk.end}}]}
         q = srccol.find(qq, [key]).sort([(key, pymongo.ASCENDING)])
         tot = q.limit(chunk_size).count()                    #limit count to chunk for speed
-    
 
 def process(source_col, 
             dest_col, 
@@ -74,7 +73,8 @@ def process(source_col,
     source = dbs[source_col].find(query)
     dest = dbd[dest_col]
     if multi == 1:
-        caller.process(source, dest)
+        for doc in source:
+            caller.process(doc, dest)
     else:
         mongoo_init(dbs[source_col], dbd[dest_col], key, query, 2)
         while housekeep.objects(state = 'open').count():
