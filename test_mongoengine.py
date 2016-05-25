@@ -8,15 +8,16 @@ class goosrc(meng.Document):
   
 class goodest(meng.Document):
     _id = meng.IntField(primary_key = True)
-  
-def process(source, dest):
+
+def init(source, dest):         #type(source)=cursor, type(dest)=collection
     print "process %d documents from %s to %s" % (source.count(), source.collection.name, dest.name)
     mongoo.connectMongoEngine(dest)
-    for doc in source:
-        gs = mongoo.toMongoEngine(doc, goosrc)
-        gd = goodest(id = gs.id * 10)
-        gd.save()
-        print "  processed %s" % gs.id
+    
+def process(source, dest):      #type(source)=document, type(dest)=collection
+    gs = mongoo.toMongoEngine(source, goosrc)
+    gd = goodest(id = gs.id * 10)
+    gd.save()
+    print "  processed %s" % gs.id
 
 if __name__ == "__main__":
     import os, pymongo

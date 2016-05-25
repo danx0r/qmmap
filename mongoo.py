@@ -73,6 +73,8 @@ def process(source_col,
     source = dbs[source_col].find(query)
     dest = dbd[dest_col]
     if multi == 1:
+        if hasattr(caller, 'init'):
+            caller.init(source, dest)
         for doc in source:
             caller.process(doc, dest)
     else:
@@ -98,14 +100,17 @@ def process(source_col,
                 # get data pointed to by housekeep
                 qq = {'$and': [query, {key: {'$gte': hko.start}}, {key: {'$lte': hko.end}}]}
                 cursor = dbs[source_col].find(qq)
-                print "%s mongo_process: %d elements in chunk %s-%s" % (datetime.datetime.now().strftime("%H:%M:%S:%f"), cursor.count(), hko.start, hko.end)
+                print "mongo_process: %d elements in chunk %s-%s" % (cursor.count(), hko.start, hko.end)
                 sys.stdout.flush()
                 if not verbose:
                     oldstdout = sys.stdout
                     sys.stdout = NULL
                 # This is where processing happens
     #             hko.good, hko.bad, hko.log = cb(cursor, dbd[dest_col])
-                caller.process(cursor, dbd[dest_col])
+                if hasattr(caller, 'init'):
+                    caller.init(cursor, dbs[dest_col])
+                for doc in cursor:
+                    caller.process(doc, dbd[dest_col])
                 if not verbose:
                     sys.stdout = oldstdout
                 hko.state = 'done'
@@ -126,7 +131,7 @@ def toMongoEngine(pmobj, metype):
     return meobj
 
 def connectMongoEngine(pmcol):
-    if pymongo.version[0] == 2:     #really? REALLY?
+    if pymongo.version_tuple[0] == 2:     #really? REALLY?
         host = pmcol.database.connection.HOST
         port = pmcol.database.connection.PORT
     else:
