@@ -1,7 +1,7 @@
 #
 # mongo Operations
 #
-import sys, importlib, datetime, time
+import sys, importlib, datetime, time, traceback
 import pymongo
 import mongoengine as meng
 from mongoengine.context_managers import switch_collection
@@ -62,9 +62,19 @@ def _init(srccol, destcol, key, query, chunk_size):
 
 def _process(init, proc, src, dest):
     if init:
-        init(src, dest)
+        try:
+            init(src, dest)
+        except:
+            print "***EXCEPTION (init)***"
+            traceback.print_exc()
+            print "***END EXCEPTION***"
     for doc in src:
-        proc(doc, dest)
+        try:
+            proc(doc, dest)
+        except:
+            print "***EXCEPTION (process)***"
+            traceback.print_exc()
+            print "***END EXCEPTION***"
 
 def process(source_col, 
             dest_col, 

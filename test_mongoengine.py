@@ -14,6 +14,8 @@ def init(source, dest):         #type(source)=cursor, type(dest)=collection
     mongoo.connectMongoEngine(dest)
     
 def process(source, dest):      #type(source)=document, type(dest)=collection
+    if source['_id'] == 6:
+        0/0
     gs = mongoo.toMongoEngine(source, goosrc)
     gd = goodest(id = gs.id * 10)
     gd.save()
