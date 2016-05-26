@@ -22,7 +22,7 @@ class housekeep(meng.Document):
     time = meng.DateTimeField()  # Time when job finished
     meta = {'indexes': ['state', 'time']}
 
-def mongoo_init(srccol, destcol, key, query, chunk_size):
+def _init(srccol, destcol, key, query, chunk_size):
     connectMongoEngine(destcol)
     hk_colname = srccol.name + '_' + destcol.name
     switch_collection(housekeep, hk_colname).__enter__()
@@ -60,6 +60,12 @@ def mongoo_init(srccol, destcol, key, query, chunk_size):
         q = srccol.find(qq, [key]).sort([(key, pymongo.ASCENDING)])
         tot = q.limit(chunk_size).count()                    #limit count to chunk for speed
 
+def _process(init, proc, src, dest):
+    if init:
+        init(src, dest)
+    for doc in src:
+        proc(doc, dest)
+
 def process(source_col, 
             dest_col, 
             source_uri="mongodb://127.0.0.1/test", 
@@ -73,12 +79,9 @@ def process(source_col,
     source = dbs[source_col].find(query)
     dest = dbd[dest_col]
     if multi == 1:
-        if hasattr(caller, 'init'):
-            caller.init(source, dest)
-        for doc in source:
-            caller.process(doc, dest)
+        _process(caller.init if hasattr(caller, 'init') else None, caller.process, source, dest)
     else:
-        mongoo_init(dbs[source_col], dbd[dest_col], key, query, 2)
+        _init(dbs[source_col], dest, key, query, 2)
         while housekeep.objects(state = 'open').count():
             tnow = datetime.datetime.utcnow()
             raw = housekeep._collection.find_and_modify(
@@ -107,10 +110,7 @@ def process(source_col,
                     sys.stdout = NULL
                 # This is where processing happens
     #             hko.good, hko.bad, hko.log = cb(cursor, dbd[dest_col])
-                if hasattr(caller, 'init'):
-                    caller.init(cursor, dbs[dest_col])
-                for doc in cursor:
-                    caller.process(doc, dbd[dest_col])
+                _process(caller.init if hasattr(caller, 'init') else None, caller.process, cursor, dest)
                 if not verbose:
                     sys.stdout = oldstdout
                 hko.state = 'done'
