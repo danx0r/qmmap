@@ -76,6 +76,47 @@ def _process(init, proc, src, dest):
             traceback.print_exc()
             print "***END EXCEPTION***"
 
+def _do_chunk(init, proc, src_col, dest_col, query, key, verbose):
+    while housekeep.objects(state = 'open').count():
+        tnow = datetime.datetime.utcnow()
+        raw = housekeep._collection.find_and_modify(
+            {'state': 'open'},
+            {
+                '$set': {
+                    'state': 'working',
+                    'tstart': tnow,
+                }
+            }
+        )
+        #if raw==None, someone scooped us
+        if raw != None:
+            #reload as mongoengine object -- _id is .start (because set as primary_key)
+            hko = housekeep.objects(start = raw['_id'])[0]
+            # Record git commit for sanity
+#             hko.git = git.Git('.').rev_parse('HEAD')
+#             hko.save()
+            # get data pointed to by housekeep
+            qq = {'$and': [query, {key: {'$gte': hko.start}}, {key: {'$lte': hko.end}}]}
+            cursor = src_col.find(qq)
+            print "mongo_process: %d elements in chunk %s-%s" % (cursor.count(), hko.start, hko.end)
+            sys.stdout.flush()
+            if not verbose:
+                oldstdout = sys.stdout
+                sys.stdout = NULL
+            # This is where processing happens
+#             hko.good, hko.bad, hko.log = cb(cursor, dbd[dest_col])
+            _process(init, proc, cursor, dest_col)
+            if not verbose:
+                sys.stdout = oldstdout
+            hko.state = 'done'
+            hko.time = datetime.datetime.utcnow()
+            hko.save()
+        else:
+            print "race lost -- skipping"
+#         print "sleep..."
+        sys.stdout.flush()
+        time.sleep(0.001)
+
 def process(source_col, 
             dest_col, 
             source_uri="mongodb://127.0.0.1/test", 
@@ -86,52 +127,13 @@ def process(source_col,
             multi=1):
     dbs = pymongo.MongoClient(source_uri).get_default_database()
     dbd = pymongo.MongoClient(dest_uri).get_default_database()
-    source = dbs[source_col].find(query)
     dest = dbd[dest_col]
     if multi == 1:
+        source = dbs[source_col].find(query)
         _process(caller.init if hasattr(caller, 'init') else None, caller.process, source, dest)
     else:
         _init(dbs[source_col], dest, key, query, 2)
-        while housekeep.objects(state = 'open').count():
-            tnow = datetime.datetime.utcnow()
-            raw = housekeep._collection.find_and_modify(
-                {'state': 'open'},
-                {
-                    '$set': {
-                        'state': 'working',
-                        'tstart': tnow,
-                    }
-                }
-            )
-            #if raw==None, someone scooped us
-            if raw != None:
-                #reload as mongoengine object -- _id is .start (because set as primary_key)
-                hko = housekeep.objects(start = raw['_id'])[0]
-                # Record git commit for sanity
-    #             hko.git = git.Git('.').rev_parse('HEAD')
-    #             hko.save()
-                # get data pointed to by housekeep
-                qq = {'$and': [query, {key: {'$gte': hko.start}}, {key: {'$lte': hko.end}}]}
-                cursor = dbs[source_col].find(qq)
-                print "mongo_process: %d elements in chunk %s-%s" % (cursor.count(), hko.start, hko.end)
-                sys.stdout.flush()
-                if not verbose:
-                    oldstdout = sys.stdout
-                    sys.stdout = NULL
-                # This is where processing happens
-    #             hko.good, hko.bad, hko.log = cb(cursor, dbd[dest_col])
-                _process(caller.init if hasattr(caller, 'init') else None, caller.process, cursor, dest)
-                if not verbose:
-                    sys.stdout = oldstdout
-                hko.state = 'done'
-                hko.time = datetime.datetime.utcnow()
-                hko.save()
-            else:
-                print "race lost -- skipping"
-    #         print "sleep..."
-            sys.stdout.flush()
-            time.sleep(0.001)
-
+        _do_chunk(caller.init if hasattr(caller, 'init') else None, caller.process, dbs[source_col], dest, query, key, verbose)
     
 def toMongoEngine(pmobj, metype):
     meobj = metype()

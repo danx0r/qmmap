@@ -1,8 +1,6 @@
 import mongoo
 
 def process(source, dest):  #type(source)=document, type(dest)=collection
-    if source['_id'] == 6:
-        0/0
     dest.save({'_id': source['_id']*10})
     print "  processed %s" % source['_id']
 
