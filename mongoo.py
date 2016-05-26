@@ -76,7 +76,7 @@ def _process(init, proc, src, dest):
             traceback.print_exc()
             print "***END EXCEPTION***"
 
-def _do_chunk(init, proc, src_col, dest_col, query, key, verbose):
+def _do_chunks(init, proc, src_col, dest_col, query, key, verbose):
     while housekeep.objects(state = 'open').count():
         tnow = datetime.datetime.utcnow()
         raw = housekeep._collection.find_and_modify(
@@ -133,7 +133,7 @@ def process(source_col,
         _process(caller.init if hasattr(caller, 'init') else None, caller.process, source, dest)
     else:
         _init(dbs[source_col], dest, key, query, 2)
-        _do_chunk(caller.init if hasattr(caller, 'init') else None, caller.process, dbs[source_col], dest, query, key, verbose)
+        _do_chunks(caller.init if hasattr(caller, 'init') else None, caller.process, dbs[source_col], dest, query, key, verbose)
     
 def toMongoEngine(pmobj, metype):
     meobj = metype()
