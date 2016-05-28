@@ -137,6 +137,7 @@ def process(source_col,
         _process(caller.init if hasattr(caller, 'init') else None, caller.process, source, dest)
     else:
         chunk_size = dbs[source_col].count() / multi
+        print "chunk size:", chunk_size
         _init(dbs[source_col], dest, key, query, chunk_size)
         _do_chunks(caller.init if hasattr(caller, 'init') else None, caller.process, dbs[source_col], dest, query, key, verbose)
     
