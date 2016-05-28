@@ -121,11 +121,34 @@ def _do_chunks(init, proc, src_col, dest_col, query, key, verbose):
         time.sleep(0.001)
 #
 # balance chunk size vs async efficiency etc
-# try for at least 10 chunks per proc
+# min 10 obj per chunk
 # max 600 obj per chunk
+# otherwise try for at least 10 chunks per proc
 #
 def _calc_chunksize(count, multi):
-    return count/multi
+    cs = count/(multi*10.0)
+#     print "\ninitial size:", cs
+    cs = max(cs, 10)
+    cs = min(cs, 600)
+    if count / float(cs * multi) < 1.0:
+        cs *= count / float(cs * multi)
+        cs = max(1, int(cs))
+#     print "obj count:", count
+#     print "multi proc:", multi
+#     print "chunk size:", cs
+#     print "chunk count:", count / float(cs)
+#     print "per proc:", count / float(cs * multi)
+    return cs
+
+# cs = _calc_chunksize(11, 3)
+# cs = _calc_chunksize(20, 1)
+# cs = _calc_chunksize(1000, 5)
+# cs = _calc_chunksize(1000, 15)
+# cs = _calc_chunksize(1000, 150)
+# cs = _calc_chunksize(100000, 5)
+# cs = _calc_chunksize(100000, 15)
+# cs = _calc_chunksize(100000, 150)
+# exit()
 
 def process(source_col, 
             dest_col, 
