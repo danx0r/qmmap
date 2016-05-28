@@ -30,7 +30,6 @@ def _init(srccol, destcol, key, query, chunk_size):
         q = srccol.find(query, [key]).sort([(key, pymongo.ASCENDING)])
         print "initializing %d entries, housekeeping for %s" % (q.count(), housekeep._get_collection_name())
     else:
-        print "DEEBG", hk_colname, housekeep.objects.count()
         raise Exception("no incremental yet")
 #         last = housekeep.objects().order_by('-start')[0].end
 #         print "last partition field in housekeep:", last
@@ -120,6 +119,13 @@ def _do_chunks(init, proc, src_col, dest_col, query, key, verbose):
 #         print "sleep..."
         sys.stdout.flush()
         time.sleep(0.001)
+#
+# balance chunk size vs async efficiency etc
+# try for at least 10 chunks per proc
+# max 600 obj per chunk
+#
+def _calc_chunksize(count, multi):
+    return count/multi
 
 def process(source_col, 
             dest_col, 
@@ -136,7 +142,7 @@ def process(source_col,
         source = dbs[source_col].find(query)
         _process(caller.init if hasattr(caller, 'init') else None, caller.process, source, dest)
     else:
-        chunk_size = dbs[source_col].count() / multi
+        chunk_size = _calc_chunksize(dbs[source_col].count(), multi)
         print "chunk size:", chunk_size
         _init(dbs[source_col], dest, key, query, chunk_size)
         _do_chunks(caller.init if hasattr(caller, 'init') else None, caller.process, dbs[source_col], dest, query, key, verbose)
