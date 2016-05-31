@@ -175,6 +175,7 @@ def toMongoEngine(pmobj, metype):
     for key in pmobj:
         if hasattr(meobj, key) and key in pmobj:
             meobj[key] = pmobj[key]
+    meobj.validate()
     return meobj
 
 def connectMongoEngine(pmcol):
