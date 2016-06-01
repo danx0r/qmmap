@@ -157,18 +157,22 @@ def process(source_col,
             query={},
             key='_id',
             verbose=True,
-            multi=None):
+            multi=None,
+            init=True,
+            defer=False):
     dbs = pymongo.MongoClient(source_uri).get_default_database()
     dbd = pymongo.MongoClient(dest_uri).get_default_database()
     dest = dbd[dest_col]
-    if multi == None:           #don't use housekeeping, run straight process
+    if (not defer) and multi == None:           #don't use housekeeping, run straight process
         source = dbs[source_col].find(query)
         _process(caller.init if hasattr(caller, 'init') else None, caller.process, source, dest)
     else:
-        chunk_size = _calc_chunksize(dbs[source_col].count(), multi)
-        print "chunk size:", chunk_size
-        _init(dbs[source_col], dest, key, query, chunk_size)
-        _do_chunks(caller.init if hasattr(caller, 'init') else None, caller.process, dbs[source_col], dest, query, key, verbose)
+        if init:
+            chunk_size = _calc_chunksize(dbs[source_col].count(), multi)
+            print "chunk size:", chunk_size
+            _init(dbs[source_col], dest, key, query, chunk_size)
+        if not defer:
+            _do_chunks(caller.init if hasattr(caller, 'init') else None, caller.process, dbs[source_col], dest, query, key, verbose)
     
 def toMongoEngine(pmobj, metype):
     meobj = metype()

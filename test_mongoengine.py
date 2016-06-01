@@ -24,7 +24,14 @@ def process(source, dest):      #type(source)=document, type(dest)=collection
 if __name__ == "__main__":
     import os, pymongo
     os.system("python make_goosrc.py mongodb://127.0.0.1/test 32")
-    mongoo.process("goosrc", "goodest", multi=3)
+    mongoo.process("goosrc", "goodest", multi=3, defer=True)
+    mongoo.process("goosrc", "goodest", multi=3, init=False)
     db = pymongo.MongoClient("mongodb://127.0.0.1/test").get_default_database()
     print "output:"
     print list(db.goodest.find())
+    good = 0
+    total = 0
+    for hk in db.goosrc_goodest.find():
+        good += hk['good']
+        total += hk['total']
+    print "%d succesful operations out of %d" % (good, total)
