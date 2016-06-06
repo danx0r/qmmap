@@ -2,7 +2,8 @@
 # mongoo worker invoked as command-line script
 #
 import sys
-from mongoo import *
+from mongoo import _do_chunks
 
-print "hey"  #sys.argv
-print 1,2,3
+print sys.argv
+
+_do_chunks()
