@@ -71,7 +71,8 @@ def _process(init, proc, src, dest):
     good = 0
     for doc in src:
         try:
-            proc(doc, dest)
+            ret = proc(doc)
+            dest.save(ret)
             good += 1
         except:
             print "***EXCEPTION (process)***"

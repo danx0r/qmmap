@@ -1,8 +1,8 @@
 import mongoo
 
-def process(source, dest):  #type(source)=document, type(dest)=collection
-    dest.save({'_id': source['_id']*10})
+def process(source):
     print "  processed %s" % source['_id']
+    return {'_id': source['_id']*10}
 
 if __name__ == "__main__":
     import os, pymongo
