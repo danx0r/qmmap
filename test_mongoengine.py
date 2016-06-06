@@ -22,8 +22,8 @@ def process(source):
 if __name__ == "__main__":
     import os, pymongo
     os.system("python make_goosrc.py mongodb://127.0.0.1/test 32")
-    mongoo.mmap("goosrc", "goodest", multi=3, defer=True)
-    mongoo.mmap("goosrc", "goodest", multi=3, init=False)
+    mongoo.mmap(None, "goosrc", "goodest", init, multi=3, defer=True)
+    mongoo.mmap(process, "goosrc", "goodest", multi=3, init=False)
     db = pymongo.MongoClient("mongodb://127.0.0.1/test").get_default_database()
     print "output:"
     print list(db.goodest.find())

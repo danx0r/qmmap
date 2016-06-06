@@ -7,7 +7,7 @@ import mongoengine as meng
 from mongoengine.context_managers import switch_collection
 
 # Ooh, it's magic, I know...
-caller = importlib.import_module(sys.argv[0][:-3])
+# caller = importlib.import_module(sys.argv[0][:-3])
 
 class housekeep(meng.Document):
     start = meng.DynamicField(primary_key = True)
@@ -151,8 +151,10 @@ def _calc_chunksize(count, multi):
 # cs = _calc_chunksize(100000, 150)
 # exit()
 
-def mmap(source_col, 
-            dest_col, 
+def mmap(   cb,
+            source_col,
+            dest_col,
+            cb_init=None, 
             source_uri="mongodb://127.0.0.1/test", 
             dest_uri="mongodb://127.0.0.1/test",
             query={},
@@ -166,14 +168,14 @@ def mmap(source_col,
     dest = dbd[dest_col]
     if (not defer) and multi == None:           #don't use housekeeping, run straight process
         source = dbs[source_col].find(query)
-        _process(caller.init if hasattr(caller, 'init') else None, caller.process, source, dest)
+        _process(cb_init, cb, source, dest)
     else:
         if init:
             chunk_size = _calc_chunksize(dbs[source_col].count(), multi)
             print "chunk size:", chunk_size
             _init(dbs[source_col], dest, key, query, chunk_size)
         if not defer:
-            _do_chunks(caller.init if hasattr(caller, 'init') else None, caller.process, dbs[source_col], dest, query, key, verbose)
+            _do_chunks(cb_init, cb, dbs[source_col], dest, query, key, verbose)
     
 def toMongoEngine(pmobj, metype):
     meobj = metype()
