@@ -151,7 +151,7 @@ def _calc_chunksize(count, multi):
 # cs = _calc_chunksize(100000, 150)
 # exit()
 
-def process(source_col, 
+def mmap(source_col, 
             dest_col, 
             source_uri="mongodb://127.0.0.1/test", 
             dest_uri="mongodb://127.0.0.1/test",
