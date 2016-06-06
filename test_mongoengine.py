@@ -1,5 +1,6 @@
 import mongoengine as meng
 import mongoo
+import os
 
 class goosrc(meng.Document):
     _id = meng.IntField(primary_key = True)
@@ -16,14 +17,16 @@ def process(source):
         0/0
     gs = mongoo.toMongoEngine(source, goosrc)
     gd = goodest(id = gs.id * 10)
-    print "  processed %s" % gs.id
+    print os.getpid(), "  processed %s" % gs.id
     return gd.to_mongo()
  
 if __name__ == "__main__":
-    import os, pymongo
+    import pymongo, time
+    print "DEBUG test_mongoengine pid:", os.getpid()
     os.system("python make_goosrc.py mongodb://127.0.0.1/test 32")
     mongoo.mmap(None, "goosrc", "goodest", init, multi=3, defer=True)
     mongoo.mmap(process, "goosrc", "goodest", multi=3, init=False)
+    time.sleep(4)
     db = pymongo.MongoClient("mongodb://127.0.0.1/test").get_default_database()
     print "output:"
     print list(db.goodest.find())
