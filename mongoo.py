@@ -197,3 +197,6 @@ def connectMongoEngine(pmcol):
         host = pmcol.database.client.HOST
         port = pmcol.database.client.PORT
     return meng.connect(pmcol.database.name, host=host, port=port)
+
+def remaining():
+    return housekeep.objects(state__ne = "done").count()
