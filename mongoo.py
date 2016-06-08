@@ -175,12 +175,15 @@ def mmap(   cb,
             _init(dbs[source_col], dest, key, query, chunk_size)
         if not defer:
             cb_mod = sys.argv[0][:-3]
+            if cb_mod == "":
+                raise Exception("ERROR -- can't generate module name. Are you trying this from the command line?")
             cmd = "python worker.py %s %s %s %s &" % (cb_mod, cb.__name__, source_col, dest_col)
             print "DEBUG cmd:", cmd
 #             _do_chunks(cb_init, cb, dbs[source_col], dest, query, key, verbose)
             for j in range(multi):
                 os.system(cmd)
-    
+    return dbd[dest_col]
+
 def toMongoEngine(pmobj, metype):
     meobj = metype()
     for key in pmobj:
