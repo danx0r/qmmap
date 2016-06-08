@@ -15,6 +15,8 @@ def init(source, dest):         #type(source)=cursor, type(dest)=collection
 def process(source):
     if source['_id'] == 6:
         0/0
+    if source['_id'] == 12:
+        return None
     gs = mongoo.toMongoEngine(source, goosrc)
     gd = goodest(id = gs.id * 10)
     print os.getpid(), "  processed %s" % gs.id
