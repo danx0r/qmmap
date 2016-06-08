@@ -25,17 +25,17 @@ def _init(srccol, destcol, key, query, chunk_size):
     connectMongoEngine(destcol)
     hk_colname = srccol.name + '_' + destcol.name
     switch_collection(housekeep, hk_colname).__enter__()
-    if housekeep.objects.count() == 0:
-        q = srccol.find(query, [key]).sort([(key, pymongo.ASCENDING)])
-        print "initializing %d entries, housekeeping for %s" % (q.count(), housekeep._get_collection_name())
-    else:
-        raise Exception("no incremental yet")
-#         last = housekeep.objects().order_by('-start')[0].end
-#         print "last partition field in housekeep:", last
-#         query[key + "__gt"] = last
-#         q = srccol.objects(**query).only(key).order_by(key)
-#         print "added %d entries to %s" % (q.count(), housekeep._get_collection_name())
-#         sys.stdout.flush()
+    housekeep.drop_collection()
+    q = srccol.find(query, [key]).sort([(key, pymongo.ASCENDING)])
+    print "initializing %d entries, housekeeping for %s" % (q.count(), housekeep._get_collection_name())
+#     else:
+#         raise Exception("no incremental yet")
+# #         last = housekeep.objects().order_by('-start')[0].end
+# #         print "last partition field in housekeep:", last
+# #         query[key + "__gt"] = last
+# #         q = srccol.objects(**query).only(key).order_by(key)
+# #         print "added %d entries to %s" % (q.count(), housekeep._get_collection_name())
+# #         sys.stdout.flush()
     i = 0
     tot = q.limit(chunk_size).count()
     while tot > 0:
@@ -174,14 +174,15 @@ def mmap(   cb,
             print "chunk size:", chunk_size
             _init(dbs[source_col], dest, key, query, chunk_size)
         if not defer:
-            cb_mod = sys.argv[0][:-3]
-            if cb_mod == "":
-                raise Exception("ERROR -- can't generate module name. Are you trying this from the command line?")
-            cmd = "python worker.py %s %s %s %s &" % (cb_mod, cb.__name__, source_col, dest_col)
-            print "DEBUG cmd:", cmd
-#             _do_chunks(cb_init, cb, dbs[source_col], dest, query, key, verbose)
-            for j in range(multi):
-                os.system(cmd)
+            if sys.argv[0] == "" or sys.argv[0][-8:] == "/ipython":
+                print ("WARNING -- can't generate module name. Multiprocessing will be emulated.")
+                _do_chunks(cb_init, cb, dbs[source_col], dest, query, key, verbose)
+            else:
+                cb_mod = sys.argv[0][:-3]
+                cmd = "python worker.py %s %s %s %s &" % (cb_mod, cb.__name__, source_col, dest_col)
+                print "DEBUG cmd:", cmd
+                for j in range(multi):
+                    os.system(cmd)
     return dbd[dest_col]
 
 def toMongoEngine(pmobj, metype):
