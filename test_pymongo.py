@@ -4,8 +4,7 @@ def process(source):
 
 if __name__ == "__main__":
     import os, pymongo, mongoo, time
-    print "DEBUG test_pymongo pid:", os.getpid()
-    os.system("python make_goosrc.py mongodb://127.0.0.1/test 10")
+    os.system("python make_goosrc.py mongodb://127.0.0.1/test 12")
     mongoo.mmap(process, "goosrc", "goodest", multi=None)
     db = pymongo.MongoClient("mongodb://127.0.0.1/test").get_default_database()
     print "output:"

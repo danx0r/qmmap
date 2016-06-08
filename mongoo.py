@@ -21,32 +21,32 @@ class housekeep(meng.Document):
     time = meng.DateTimeField()  # Time when job finished
     meta = {'indexes': ['state', 'time']}
 
-def _init(srccol, destcol, key, query, chunk_size):
+def _init(srccol, destcol, key, query, chunk_size, verbose):
     connectMongoEngine(destcol)
     hk_colname = srccol.name + '_' + destcol.name
     switch_collection(housekeep, hk_colname).__enter__()
     housekeep.drop_collection()
     q = srccol.find(query, [key]).sort([(key, pymongo.ASCENDING)])
-    print "initializing %d entries, housekeeping for %s" % (q.count(), housekeep._get_collection_name())
+    if verbose: print "initializing %d entries, housekeeping for %s" % (q.count(), housekeep._get_collection_name())
 #     else:
 #         raise Exception("no incremental yet")
 # #         last = housekeep.objects().order_by('-start')[0].end
-# #         print "last partition field in housekeep:", last
+# #         if verbose: print "last partition field in housekeep:", last
 # #         query[key + "__gt"] = last
 # #         q = srccol.objects(**query).only(key).order_by(key)
-# #         print "added %d entries to %s" % (q.count(), housekeep._get_collection_name())
+# #         if verbose: print "added %d entries to %s" % (q.count(), housekeep._get_collection_name())
 # #         sys.stdout.flush()
     i = 0
     tot = q.limit(chunk_size).count()
     while tot > 0:
-        print "housekeeping: %d" % i
+        if verbose: print "housekeeping: %d" % i
         i +=1
         sys.stdout.flush()
         hk = housekeep()
         hk.start = q[0][key]
         hk.end =  q[min(chunk_size-1, tot-1)][key]
         if (hk.start == None or hk.end == None):
-            print >> sys.stderr, "ERROR: key field has None. start: %s end: %s" % (hk.start, hk.end)
+            if verbose: print >> sys.stderr, "ERROR: key field has None. start: %s end: %s" % (hk.start, hk.end)
             raise Exception("key error")
         #calc total for this segment
         qq = {'$and': [query, {key: {'$gte': hk.start}}, {key: {'$lte': hk.end}}]}
@@ -58,25 +58,26 @@ def _init(srccol, destcol, key, query, chunk_size):
         q = srccol.find(qq, [key]).sort([(key, pymongo.ASCENDING)])
         tot = q.limit(chunk_size).count()                    #limit count to chunk for speed
 
-def _process(init, proc, src, dest):
+def _process(init, proc, src, dest, verbose):
     if init:
         try:
             init(src, dest)
         except:
-            print "***EXCEPTION (init)***"
+            if verbose: print "***EXCEPTION (init)***"
             traceback.print_exc()
-            print "***END EXCEPTION***"
+            if verbose: print "***END EXCEPTION***"
             return 0
     good = 0
     for doc in src:
         try:
             ret = proc(doc)
-            dest.save(ret)
+            if ret != None:
+                dest.save(ret)
             good += 1
         except:
-            print "***EXCEPTION (process)***"
+            if verbose: print "***EXCEPTION (process)***"
             traceback.print_exc()
-            print "***END EXCEPTION***"
+            if verbose: print "***END EXCEPTION***"
     return good
 
 def _do_chunks(init, proc, src_col, dest_col, query, key, verbose):
@@ -101,22 +102,22 @@ def _do_chunks(init, proc, src_col, dest_col, query, key, verbose):
             # get data pointed to by housekeep
             qq = {'$and': [query, {key: {'$gte': hko.start}}, {key: {'$lte': hko.end}}]}
             cursor = src_col.find(qq)
-            print "mongo_process: %d elements in chunk %s-%s" % (cursor.count(), hko.start, hko.end)
+            if verbose: print "mongo_process: %d elements in chunk %s-%s" % (cursor.count(), hko.start, hko.end)
             sys.stdout.flush()
             if not verbose:
                 oldstdout = sys.stdout
                 sys.stdout = NULL
             # This is where processing happens
 #             hko.good, hko.bad, hko.log = cb(cursor, dbd[dest_col])
-            hko.good =_process(init, proc, cursor, dest_col)
+            hko.good =_process(init, proc, cursor, dest_col, verbose)
             if not verbose:
                 sys.stdout = oldstdout
             hko.state = 'done'
             hko.time = datetime.datetime.utcnow()
             hko.save()
         else:
-            print "race lost -- skipping"
-#         print "sleep..."
+            if verbose: print "race lost -- skipping"
+#         if verbose: print "sleep..."
         sys.stdout.flush()
         time.sleep(0.001)
 #
@@ -127,17 +128,17 @@ def _do_chunks(init, proc, src_col, dest_col, query, key, verbose):
 #
 def _calc_chunksize(count, multi):
     cs = count/(multi*10.0)
-#     print "\ninitial size:", cs
+#     if verbose: print "\ninitial size:", cs
     cs = max(cs, 10)
     cs = min(cs, 600)
     if count / float(cs * multi) < 1.0:
         cs *= count / float(cs * multi)
         cs = max(1, int(cs))
-#     print "obj count:", count
-#     print "multi proc:", multi
-#     print "chunk size:", cs
-#     print "chunk count:", count / float(cs)
-#     print "per proc:", count / float(cs * multi)
+#     if verbose: print "obj count:", count
+#     if verbose: print "multi proc:", multi
+#     if verbose: print "chunk size:", cs
+#     if verbose: print "chunk count:", count / float(cs)
+#     if verbose: print "per proc:", count / float(cs * multi)
     return cs
 
 # cs = _calc_chunksize(11, 3)
@@ -158,7 +159,7 @@ def mmap(   cb,
             dest_uri="mongodb://127.0.0.1/test",
             query={},
             key='_id',
-            verbose=True,
+            verbose=False,
             multi=None,
             init=True,
             defer=False):
@@ -167,20 +168,20 @@ def mmap(   cb,
     dest = dbd[dest_col]
     if (not defer) and multi == None:           #don't use housekeeping, run straight process
         source = dbs[source_col].find(query)
-        _process(cb_init, cb, source, dest)
+        _process(cb_init, cb, source, dest, verbose)
     else:
         if init:
             chunk_size = _calc_chunksize(dbs[source_col].count(), multi)
-            print "chunk size:", chunk_size
-            _init(dbs[source_col], dest, key, query, chunk_size)
+            if verbose: print "chunk size:", chunk_size
+            _init(dbs[source_col], dest, key, query, chunk_size, verbose)
         if not defer:
             if sys.argv[0] == "" or sys.argv[0][-8:] == "/ipython":
-                print ("WARNING -- can't generate module name. Multiprocessing will be emulated.")
+                print >> sys.stderr, ("WARNING -- can't generate module name. Multiprocessing will be emulated...")
                 _do_chunks(cb_init, cb, dbs[source_col], dest, query, key, verbose)
             else:
                 cb_mod = sys.argv[0][:-3]
                 cmd = "python worker.py %s %s %s %s &" % (cb_mod, cb.__name__, source_col, dest_col)
-                print "DEBUG cmd:", cmd
+                if verbose: print "os.system:", cmd
                 for j in range(multi):
                     os.system(cmd)
     return dbd[dest_col]

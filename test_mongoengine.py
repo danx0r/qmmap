@@ -25,8 +25,7 @@ def process(source):
  
 if __name__ == "__main__":
     import pymongo, time
-    print "DEBUG test_mongoengine pid:", os.getpid()
-    os.system("python make_goosrc.py mongodb://127.0.0.1/test 32")
+    os.system("python make_goosrc.py mongodb://127.0.0.1/test 33")
     mongoo.mmap(None, "goosrc", "goodest", init, multi=3, defer=True)
     mongoo.mmap(process, "goosrc", "goodest", multi=3, init=False)
     r = mongoo.remaining()

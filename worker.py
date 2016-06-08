@@ -4,9 +4,6 @@
 import sys, os, importlib, argparse, json, pymongo
 from mongoo import _do_chunks, connectMongoEngine, housekeep
 from mongoengine.context_managers import switch_collection
-print "DEBUG worker pid:", os.getpid()
-
-print sys.argv
 
 par = argparse.ArgumentParser(description = "Mongoo worker process")
 par.add_argument("module")
@@ -18,10 +15,9 @@ par.add_argument("--dest_uri", type=str, default = "mongodb://127.0.0.1/test")
 par.add_argument("--init", type=str, default = "")
 par.add_argument("--query", type=str, default = "{}")
 par.add_argument("--key", type=str, default = "_id")
-par.add_argument("--verbose", type=int, default = 1)
+par.add_argument("--verbose", type=int, default = False)
 
 config = par.parse_args()
-print config
 
 query = json.loads(config.query)
 
