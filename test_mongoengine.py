@@ -25,8 +25,7 @@ def process(source):
 if __name__ == "__main__":
     import pymongo, time
     os.system("python make_goosrc.py mongodb://127.0.0.1/test 33")
-    mongoo.mmap(None, "goosrc", "goodest", multi=3, defer=True)
-    mongoo.mmap(process, "goosrc", "goodest", cb_init=init, multi=3, init=False)
+    mongoo.mmap(process, "goosrc", "goodest", cb_init=init, multi=3)
     r = mongoo.remaining()
     while r:
         print r, "chunks remaning to be processed"
