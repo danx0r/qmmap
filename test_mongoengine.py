@@ -31,7 +31,7 @@ def process(source):
 if __name__ == "__main__":
     import pymongo, time
     os.system("python make_source.py mongodb://127.0.0.1/test 33")
-    mongoo.mmap(process, "mongoo_src", "mongoo_dest", cb_init=init, multi=3)
+    mongoo.mmap(process, "mongoo_src", "mongoo_dest", cb_init=init, multi=3, verbose=3)
     r = mongoo.remaining()
     while r:
         print r, "chunks remaning to be processed"
@@ -46,6 +46,7 @@ if __name__ == "__main__":
     good = 0
     total = 0
 
+    #inspect housekeeping collection for fun & profit
     for hk in db.mongoo_src_mongoo_dest.find():
         good += hk['good']
         total += hk['total']
