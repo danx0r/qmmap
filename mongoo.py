@@ -58,7 +58,10 @@ def _init(srccol, destcol, key, query, chunk_size, verbose):
         q = srccol.find(qq, [key]).sort([(key, pymongo.ASCENDING)])
         tot = q.limit(chunk_size).count()                    #limit count to chunk for speed
 
-def _process(init, proc, src, dest):
+def _process(init, proc, src, dest, verbose):
+    if not verbose & 1:
+        oldstdout = sys.stdout
+        sys.stdout = NULL
     if init:
         try:
             init(src, dest)
@@ -78,6 +81,8 @@ def _process(init, proc, src, dest):
             print >> sys.stderr, "***EXCEPTION (process)***"
             print >> sys.stderr, traceback.format_exc()
             print >> sys.stderr, "***END EXCEPTION***"
+    if not verbose & 1:
+        sys.stdout = oldstdout
     return good
 
 def _do_chunks(init, proc, src_col, dest_col, query, key, verbose):
@@ -104,13 +109,8 @@ def _do_chunks(init, proc, src_col, dest_col, query, key, verbose):
             cursor = src_col.find(qq)
             if verbose & 2: print "mongo_process: %d elements in chunk %s-%s" % (cursor.count(), hko.start, hko.end)
             sys.stdout.flush()
-            if not verbose & 1:
-                oldstdout = sys.stdout
-                sys.stdout = NULL
             # This is where processing happens
-            hko.good =_process(init, proc, cursor, dest_col)
-            if not verbose & 1:
-                sys.stdout = oldstdout
+            hko.good =_process(init, proc, cursor, dest_col, verbose)
             hko.state = 'done'
             hko.time = datetime.datetime.utcnow()
             hko.save()
@@ -182,7 +182,7 @@ def mmap(   cb,
                 cb_mod = sys.argv[0][:-3]
                 cmd = "python worker.py %s %s %s %s --src_uri='%s' --dest_uri='%s' --init='%s' --query='%s' --key=%s --verbose=%s &" % (cb_mod, cb.__name__, source_col, dest_col,
                                                                 source_uri, dest_uri, cb_init.__name__ if cb_init else '', query, key, verbose)
-                if 1 or verbose & 2: print "os.system:", cmd
+                if verbose & 2: print "os.system:", cmd
                 for j in range(multi):
                     os.system(cmd)
     return dbd[dest_col]
