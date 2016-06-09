@@ -1,7 +1,7 @@
 #
 # mongo Operations
 #
-import sys, os, importlib, datetime, time, traceback
+import sys, os, importlib, datetime, time, traceback, random
 import pymongo
 import mongoengine as meng
 from mongoengine.context_managers import switch_collection
@@ -72,6 +72,9 @@ def _process(init, proc, src, dest, verbose):
             return 0
     good = 0
     for doc in src:
+#         if random.random() < .11:
+#             print >> sys.stderr, "UNFATHOMABLE EXIT"
+#             exit()
         try:
             ret = proc(doc)
             if ret != None:
@@ -162,7 +165,8 @@ def mmap(   cb,
             multi=None,
             init=True,
             defer=False,
-            mongoengine=False):
+            mongoengine=False,
+            timeout=30):
     dbs = pymongo.MongoClient(source_uri).get_default_database()
     dbd = pymongo.MongoClient(dest_uri).get_default_database()
     dest = dbd[dest_col]
@@ -207,3 +211,10 @@ def connectMongoEngine(pmcol):
 
 def remaining():
     return housekeep.objects(state__ne = "done").count()
+
+def wait():
+    r = remaining()
+    while r:
+        print r, "chunks remaning to be processed"
+        time.sleep(.25)
+        r = remaining()
