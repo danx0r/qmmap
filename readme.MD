@@ -35,10 +35,43 @@ print list(ret.find())
 [{u'_id': 0}, {u'_id': 10}, {u'_id': 20}, {u'_id': 30}, {u'_id': 40}, {u'_id': 50}, {u'_id': 60}, {u'_id': 70}, {u'_id': 80}, {u'_id': 90}]
 ```
 
+mongoo has helper functions to support mongoengine classes:
+
+```Python
+from mongoengine import Document, IntField, connect
+from mongoo import toMongoEngine, connectMongoEngine
+connect()
+
+class mongoo_src(Document):
+    num = IntField(primary_key = True)
+
+class mongoo_dest(Document):
+    val = IntField(primary_key = True)
+
+def init(source, dest):
+    connectMongoEngine(dest)
+
+def func(source):
+    gs = toMongoEngine(source, mongoo_src)
+    gd = mongoo_dest(val = gs.num * 10)
+    return gd.to_mongo()
+
+ret = mmap(func, "mongoo_src", "mongoo_dest")
+
+for o in mongoo_dest.objects:
+    print o.val,
+0 10 20 30 40 50 60 70 80 90
+```
+
 We can leverage multiple CPU's by specifying the ```multi``` parameter:
 
 ```Python
 ret = mmap(func, "mongoo_src", "mongoo_dest", multi=2)
+WARNING -- can't generate module name. Multiprocessing will be emulated...
+
 print list(ret.find())
+[{u'_id': 10}, {u'_id': 20}, {u'_id': 30}, {u'_id': 40}, {u'_id': 50}, {u'_id': 60}, {u'_id': 70}, {u'_id': 80}, {u'_id': 90}, {u'_id': 100}, {u'_id': 0}]
 ```
+
+mongoo doesn't (presently) support multiple CPU's from the command line, so we get a warning. Run ```test_mongoengine.py``` to see multi work for real.
 

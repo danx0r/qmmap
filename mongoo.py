@@ -69,15 +69,20 @@ def _process(init, proc, src, dest, verbose):
             return 0
     good = 0
     for doc in src:
+#         if verbose < 0:
+#             oldstdout = sys.stdout
+#             sys.stdout = NULL
         try:
             ret = proc(doc)
             if ret != None:
                 dest.save(ret)
             good += 1
         except:
-            if verbose: print "***EXCEPTION (process)***"
-            traceback.print_exc()
-            if verbose: print "***END EXCEPTION***"
+            print >> sys.stderr, "***EXCEPTION (process)***"
+            print >> sys.stderr, traceback.format_exc()
+            print >> sys.stderr, "***END EXCEPTION***"
+#         if verbose < 0:
+#             sys.stdout = oldstdout
     return good
 
 def _do_chunks(init, proc, src_col, dest_col, query, key, verbose):
@@ -159,10 +164,11 @@ def mmap(   cb,
             dest_uri="mongodb://127.0.0.1/test",
             query={},
             key='_id',
-            verbose=False,
+            verbose=0,
             multi=None,
             init=True,
-            defer=False):
+            defer=False,
+            mongoengine=False):
     dbs = pymongo.MongoClient(source_uri).get_default_database()
     dbd = pymongo.MongoClient(dest_uri).get_default_database()
     dest = dbd[dest_col]
@@ -180,7 +186,8 @@ def mmap(   cb,
                 _do_chunks(cb_init, cb, dbs[source_col], dest, query, key, verbose)
             else:
                 cb_mod = sys.argv[0][:-3]
-                cmd = "python worker.py %s %s %s %s &" % (cb_mod, cb.__name__, source_col, dest_col)
+                cmd = "python worker.py %s %s %s %s --src_uri='%s' --dest_uri='%s' --query='%s' --key=%s --verbose=%s &" % (cb_mod, cb.__name__, source_col, dest_col,
+                                                                source_uri, dest_uri, query, key, verbose)
                 if verbose: print "os.system:", cmd
                 for j in range(multi):
                     os.system(cmd)
@@ -189,8 +196,9 @@ def mmap(   cb,
 def toMongoEngine(pmobj, metype):
     meobj = metype()
     for key in pmobj:
-        if hasattr(meobj, key) and key in pmobj:
+        if hasattr(meobj, key) and key != '_id' and key in pmobj:
             meobj[key] = pmobj[key]
+    meobj[type(meobj).id.name] = pmobj['_id']
     meobj.validate()
     return meobj
 
