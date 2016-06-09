@@ -9,8 +9,7 @@ class goodest(meng.Document):
     _id = meng.IntField(primary_key = True)
 
 def init(source, dest):         #type(source)=cursor, type(dest)=collection
-    print >> sys.stderr, "process %d documents from %s to %s" % (source.count(), source.collection.name, dest.name)
-#     mongoo.connectMongoEngine(dest)
+    "process %d documents from %s to %s" % (source.count(), source.collection.name, dest.name)
     
 def process(source):
     if source['_id'] == 6:
@@ -26,8 +25,8 @@ def process(source):
 if __name__ == "__main__":
     import pymongo, time
     os.system("python make_goosrc.py mongodb://127.0.0.1/test 33")
-    mongoo.mmap(None, "goosrc", "goodest", cb_init=init, multi=3, defer=True)
-    mongoo.mmap(process, "goosrc", "goodest", multi=3, init=False)
+    mongoo.mmap(None, "goosrc", "goodest", multi=3, defer=True)
+    mongoo.mmap(process, "goosrc", "goodest", cb_init=init, multi=3, init=False)
     r = mongoo.remaining()
     while r:
         print r, "chunks remaning to be processed"
