@@ -60,7 +60,6 @@ def _init(srccol, destcol, key, query, chunk_size, verbose):
 
 def _process(init, proc, src, dest):
     if init:
-        print "INIT"
         try:
             init(src, dest)
         except:
@@ -68,8 +67,6 @@ def _process(init, proc, src, dest):
             print >> sys.stderr, traceback.format_exc()
             print >> sys.stderr, "***END EXCEPTION***"
             return 0
-    else:
-        print "NINI"
     good = 0
     for doc in src:
         try:
@@ -108,11 +105,8 @@ def _do_chunks(init, proc, src_col, dest_col, query, key, verbose):
             if verbose & 2: print "mongo_process: %d elements in chunk %s-%s" % (cursor.count(), hko.start, hko.end)
             sys.stdout.flush()
             if not verbose & 1:
-                print "OFF"
                 oldstdout = sys.stdout
                 sys.stdout = NULL
-            else:
-                print "ONN"
             # This is where processing happens
             hko.good =_process(init, proc, cursor, dest_col)
             if not verbose & 1:

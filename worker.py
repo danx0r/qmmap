@@ -18,7 +18,6 @@ par.add_argument("--key", type=str, default = "_id")
 par.add_argument("--verbose", type=int, default = False)
 
 config = par.parse_args()
-print "CONFIG:", config
 
 query = json.loads(config.query)
 
