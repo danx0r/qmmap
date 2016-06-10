@@ -1,7 +1,7 @@
 #
 # mongo Operations
 #
-import sys, os, importlib, datetime, time, traceback, random
+import sys, os, importlib, datetime, time, traceback
 import pymongo
 import mongoengine as meng
 from mongoengine.context_managers import switch_collection
@@ -72,9 +72,6 @@ def _process(init, proc, src, dest, verbose):
             return 0
     good = 0
     for doc in src:
-        if random.random() < .07:
-            print >> sys.stderr, "UNFATHOMABLE EXIT"
-            exit()
         try:
             ret = proc(doc)
             if ret != None:
@@ -212,7 +209,7 @@ def connectMongoEngine(pmcol):
 def remaining():
     return housekeep.objects(state__ne = "done").count()
 
-def wait(timeout=10):
+def wait(timeout=120):
     t = time.time()
     r = remaining()
     rr = r
