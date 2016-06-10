@@ -73,5 +73,5 @@ print list(ret.find())
 [{u'_id': 10}, {u'_id': 20}, {u'_id': 30}, {u'_id': 40}, {u'_id': 50}, {u'_id': 60}, {u'_id': 70}, {u'_id': 80}, {u'_id': 90}, {u'_id': 100}, {u'_id': 0}]
 ```
 
-mongoo doesn't (presently) support multiple CPU's from the command line, so we get a warning. Run ```test_mongoengine.py``` to see multi work for real.
+mongoo doesn't (presently) support multiple CPU's from the command line, so we get a warning. Run ```test_mongoengine.py``` to see multiple CPU's work for real.
 
