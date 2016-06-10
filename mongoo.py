@@ -72,9 +72,9 @@ def _process(init, proc, src, dest, verbose):
             return 0
     good = 0
     for doc in src:
-#         if random.random() < .11:
-#             print >> sys.stderr, "UNFATHOMABLE EXIT"
-#             exit()
+        if random.random() < .07:
+            print >> sys.stderr, "UNFATHOMABLE EXIT"
+            exit()
         try:
             ret = proc(doc)
             if ret != None:
@@ -89,7 +89,7 @@ def _process(init, proc, src, dest, verbose):
     return good
 
 def _do_chunks(init, proc, src_col, dest_col, query, key, verbose):
-    while housekeep.objects(state = 'open').count():
+    while housekeep.objects(state = 'done').count() < housekeep.objects.count():
         tnow = datetime.datetime.utcnow()
         raw = housekeep._collection.find_and_modify(
             {'state': 'open'},
@@ -117,11 +117,11 @@ def _do_chunks(init, proc, src_col, dest_col, query, key, verbose):
             hko.state = 'done'
             hko.time = datetime.datetime.utcnow()
             hko.save()
-        else:
-            if verbose & 2: print "race lost -- skipping"
+#         else:
+#             if verbose & 2: print "race lost -- skipping"
 #         if verbose & 2: print "sleep..."
         sys.stdout.flush()
-        time.sleep(0.001)
+        time.sleep(0.1)
 #
 # balance chunk size vs async efficiency etc
 # min 10 obj per chunk
@@ -165,8 +165,8 @@ def mmap(   cb,
             multi=None,
             init=True,
             defer=False,
-            mongoengine=False,
-            timeout=30):
+            mongoengine=False):
+
     dbs = pymongo.MongoClient(source_uri).get_default_database()
     dbd = pymongo.MongoClient(dest_uri).get_default_database()
     dest = dbd[dest_col]
@@ -212,9 +212,20 @@ def connectMongoEngine(pmcol):
 def remaining():
     return housekeep.objects(state__ne = "done").count()
 
-def wait():
+def wait(timeout=10):
+    t = time.time()
     r = remaining()
+    rr = r
     while r:
-        print r, "chunks remaning to be processed"
-        time.sleep(.25)
+#         print "DEBUG r %f rr %f t %f" % (r, rr, time.time() - t)
+        if time.time() - t > timeout:
+            print >> sys.stderr, "TIMEOUT reached - resetting working chunks to open"
+            q = housekeep.objects(state = "working")
+            if q:
+                q.update(state = "open")
+        if r != rr:
+            t = time.time()
+        print r, "chunks remaning to be processed; %f seconds left until timeout" % (timeout - (time.time() - t)) 
+        time.sleep(1)
+        rr = r
         r = remaining()

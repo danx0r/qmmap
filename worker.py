@@ -35,4 +35,6 @@ connectMongoEngine(dest)
 hk_colname = source.name + '_' + dest.name
 switch_collection(housekeep, hk_colname).__enter__()
 
+# print "DEBUG start worker", os.getpid()
 _do_chunks(init, cb, source, dest, query, config.key, config.verbose)
+# print "DEBUG end worker", os.getpid()
