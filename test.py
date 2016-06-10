@@ -9,6 +9,9 @@ class mongoo_src(meng.Document):
 class mongoo_dest(meng.Document):
     s = meng.StringField()
 
+def init(source_cursor, destination_collection):
+    print "processing %d documents from %s to %s" % (source_cursor.count(), source_cursor.collection.name, destination_collection.name)
+
 def process(source):
     gs = mongoo.toMongoEngine(source, mongoo_src)
     s = ""
@@ -57,7 +60,7 @@ if __name__ == "__main__":
     
     print "Running mmap..."
     t = time.time()
-    mongoo.mmap(process, "mongoo_src", "mongoo_dest", multi=config.processes, verbose=config.verbose)
+    mongoo.mmap(process, "mongoo_src", "mongoo_dest", init=init, multi=config.processes, verbose=config.verbose)
     print "time processing:", time.time() - t, "seconds"
     print "representative output:"
 #     print list(db.mongoo_dest.find())

@@ -153,7 +153,7 @@ def _calc_chunksize(count, multi):
 def mmap(   cb,
             source_col,
             dest_col,
-            cb_init=None, 
+            init=None, 
             source_uri="mongodb://127.0.0.1/test", 
             dest_uri="mongodb://127.0.0.1/test",
             query={},
@@ -166,20 +166,20 @@ def mmap(   cb,
     dbs = pymongo.MongoClient(source_uri).get_default_database()
     dbd = pymongo.MongoClient(dest_uri).get_default_database()
     dest = dbd[dest_col]
-    if (not defer) and multi == None:           #don't use housekeeping, run straight process
+    if multi == None:           #don't use housekeeping, run straight process
         source = dbs[source_col].find(query)
-        _process(cb_init, cb, source, dest, verbose)
+        _process(init, cb, source, dest, verbose)
     else:
         chunk_size = _calc_chunksize(dbs[source_col].count(), multi)
         if verbose & 2: print "chunk size:", chunk_size
         _init(dbs[source_col], dest, key, query, chunk_size, verbose)
         if sys.argv[0] == "" or sys.argv[0][-8:] == "/ipython":
             print >> sys.stderr, ("WARNING -- can't generate module name. Multiprocessing will be emulated...")
-            do_chunks(cb_init, cb, dbs[source_col], dest, query, key, verbose)
+            do_chunks(init, cb, dbs[source_col], dest, query, key, verbose)
         else:
             cb_mod = sys.argv[0][:-3]
             cmd = "python worker.py %s %s %s %s --src_uri='%s' --dest_uri='%s' --init='%s' --query='%s' --key=%s --verbose=%s &" % (cb_mod, cb.__name__, source_col, dest_col,
-                                                            source_uri, dest_uri, cb_init.__name__ if cb_init else '', query, key, verbose)
+                                                            source_uri, dest_uri, init.__name__ if init else '', query, key, verbose)
             if verbose & 2: print "os.system:", cmd
             for j in range(multi):
                 os.system(cmd)
