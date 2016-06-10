@@ -160,11 +160,8 @@ def mmap(   cb,
             key='_id',
             verbose=1,
             multi=None,
-            init=True,
-            defer=False,
             wait_done=True,
-            timeout=120,
-            mongoengine=False):
+            timeout=120):
 
     dbs = pymongo.MongoClient(source_uri).get_default_database()
     dbd = pymongo.MongoClient(dest_uri).get_default_database()
@@ -173,21 +170,19 @@ def mmap(   cb,
         source = dbs[source_col].find(query)
         _process(cb_init, cb, source, dest, verbose)
     else:
-        if init:
-            chunk_size = _calc_chunksize(dbs[source_col].count(), multi)
-            if verbose & 2: print "chunk size:", chunk_size
-            _init(dbs[source_col], dest, key, query, chunk_size, verbose)
-        if not defer:
-            if sys.argv[0] == "" or sys.argv[0][-8:] == "/ipython":
-                print >> sys.stderr, ("WARNING -- can't generate module name. Multiprocessing will be emulated...")
-                do_chunks(cb_init, cb, dbs[source_col], dest, query, key, verbose)
-            else:
-                cb_mod = sys.argv[0][:-3]
-                cmd = "python worker.py %s %s %s %s --src_uri='%s' --dest_uri='%s' --init='%s' --query='%s' --key=%s --verbose=%s &" % (cb_mod, cb.__name__, source_col, dest_col,
-                                                                source_uri, dest_uri, cb_init.__name__ if cb_init else '', query, key, verbose)
-                if verbose & 2: print "os.system:", cmd
-                for j in range(multi):
-                    os.system(cmd)
+        chunk_size = _calc_chunksize(dbs[source_col].count(), multi)
+        if verbose & 2: print "chunk size:", chunk_size
+        _init(dbs[source_col], dest, key, query, chunk_size, verbose)
+        if sys.argv[0] == "" or sys.argv[0][-8:] == "/ipython":
+            print >> sys.stderr, ("WARNING -- can't generate module name. Multiprocessing will be emulated...")
+            do_chunks(cb_init, cb, dbs[source_col], dest, query, key, verbose)
+        else:
+            cb_mod = sys.argv[0][:-3]
+            cmd = "python worker.py %s %s %s %s --src_uri='%s' --dest_uri='%s' --init='%s' --query='%s' --key=%s --verbose=%s &" % (cb_mod, cb.__name__, source_col, dest_col,
+                                                            source_uri, dest_uri, cb_init.__name__ if cb_init else '', query, key, verbose)
+            if verbose & 2: print "os.system:", cmd
+            for j in range(multi):
+                os.system(cmd)
     if wait_done and (not multi == None):
         wait(timeout, verbose & 2)
     return dbd[dest_col]
