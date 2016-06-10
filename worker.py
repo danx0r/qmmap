@@ -15,7 +15,7 @@ par.add_argument("--dest_uri", type=str, default = "mongodb://127.0.0.1/test")
 par.add_argument("--init", type=str, default = "")
 par.add_argument("--query", type=str, default = "{}")
 par.add_argument("--key", type=str, default = "_id")
-par.add_argument("--verbose", type=int, default = False)
+par.add_argument("--verbose", type=int, default = 0)
 
 config = par.parse_args()
 

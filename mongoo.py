@@ -162,6 +162,8 @@ def mmap(   cb,
             multi=None,
             init=True,
             defer=False,
+            wait_done=True,
+            timeout=120,
             mongoengine=False):
 
     dbs = pymongo.MongoClient(source_uri).get_default_database()
@@ -186,6 +188,8 @@ def mmap(   cb,
                 if verbose & 2: print "os.system:", cmd
                 for j in range(multi):
                     os.system(cmd)
+    if wait_done:
+        wait(timeout, verbose & 2)
     return dbd[dest_col]
 
 def toMongoEngine(pmobj, metype):
@@ -210,20 +214,20 @@ def connectMongoEngine(pmcol):
 def remaining():
     return housekeep.objects(state__ne = "done").count()
 
-def wait(timeout=120):
+def wait(timeout=120, verbose=True):
     t = time.time()
     r = remaining()
     rr = r
     while r:
 #         print "DEBUG r %f rr %f t %f" % (r, rr, time.time() - t)
         if time.time() - t > timeout:
-            print >> sys.stderr, "TIMEOUT reached - resetting working chunks to open"
+            if verbose: print >> sys.stderr, "TIMEOUT reached - resetting working chunks to open"
             q = housekeep.objects(state = "working")
             if q:
                 q.update(state = "open")
         if r != rr:
             t = time.time()
-        print r, "chunks remaning to be processed; %f seconds left until timeout" % (timeout - (time.time() - t)) 
+        if verbose: print r, "chunks remaning to be processed; %f seconds left until timeout" % (timeout - (time.time() - t)) 
         time.sleep(1)
         rr = r
         r = remaining()

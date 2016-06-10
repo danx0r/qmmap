@@ -1,9 +1,6 @@
-import os, sys, time, random
+import os, sys, time, random, argparse
 import mongoengine as meng
 import mongoo
-
-SIZE = 500
-NUM = 10000
 
 class mongoo_src(meng.Document):
     s1 = meng.StringField()
@@ -21,9 +18,9 @@ def process(source):
     gd = mongoo_dest(s = s)
     return gd.to_mongo()
 
-def randstring():
+def randstring(size):
     s = ""
-    for i in range(SIZE):
+    for i in range(size):
         s += chr(random.randint(65, 65+25))
     return s
  
@@ -32,20 +29,34 @@ if __name__ == "__main__":
     db = pymongo.MongoClient("mongodb://127.0.0.1/test").get_default_database()
     meng.connect()
 
-    if raw_input("drop mongoo_src, mongoo_dest, housekeeping(mongoo_src_mongoo_dest)?")[:1] == 'y':
-        db.mongoo_src.drop()
-        db.mongoo_dest.drop()
-        db.mongoo_src_mongoo_dest.drop()
+    par = argparse.ArgumentParser(description = "Mongoo test large data set")
+    par.add_argument("processes", type=int, nargs='?', default=1)
+    par.add_argument("size", type=int, nargs='?', default=500)
+    par.add_argument("num", type=int, nargs='?', default=10000)
+    par.add_argument("--verbose", type=int, default = 1)
+    par.add_argument("--skipdata", action='store_true')
+    
+    config = par.parse_args()
 
-    for i in range(NUM):
-        src = mongoo_src()
-        src.s1 = randstring()
-        src.s2 = randstring()
-        src.save()
+    if not config.skipdata:
+        if raw_input("drop mongoo_src, mongoo_dest, housekeeping(mongoo_src_mongoo_dest)?")[:1] == 'y':
+            db.mongoo_src.drop()
+            db.mongoo_dest.drop()
+            db.mongoo_src_mongoo_dest.drop()
+    
+        print "Generating test data, this may be slow..."
+        for i in range(config.num):
+            src = mongoo_src()
+            src.s1 = randstring(config.size)
+            src.s2 = randstring(config.size)
+            src.save()
+    else:
+        if raw_input("drop mongoo_dest, housekeeping(mongoo_src_mongoo_dest)?")[:1] == 'y':
+            db.mongoo_dest.drop()
+            db.mongoo_src_mongoo_dest.drop()
     
     t = time.time()
-    mongoo.mmap(process, "mongoo_src", "mongoo_dest", multi=5, verbose=3)
-    mongoo.wait()
+    mongoo.mmap(process, "mongoo_src", "mongoo_dest", multi=config.processes, verbose=config.verbose)
     print "time processing:", time.time() - t, "seconds"
     print "representative output:"
 #     print list(db.mongoo_dest.find())

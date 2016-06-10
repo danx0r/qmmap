@@ -30,13 +30,7 @@ def process(source):
 if __name__ == "__main__":
     import pymongo, time
     os.system("python make_source.py mongodb://127.0.0.1/test 33")
-    mongoo.mmap(process, "mongoo_src", "mongoo_dest", cb_init=init, multi=10, verbose=3)
-#     r = mongoo.remaining()
-#     while r:
-#         print r, "chunks remaning to be processed"
-#         time.sleep(.25)
-#         r = mongoo.remaining()
-    mongoo.wait(10)
+    mongoo.mmap(process, "mongoo_src", "mongoo_dest", cb_init=init, multi=10, verbose=3, timeout=10)
     db = pymongo.MongoClient("mongodb://127.0.0.1/test").get_default_database()
     print "output:"
 #     print list(db.mongoo_dest.find())
