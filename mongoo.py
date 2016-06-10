@@ -85,7 +85,7 @@ def _process(init, proc, src, dest, verbose):
         sys.stdout = oldstdout
     return good
 
-def _do_chunks(init, proc, src_col, dest_col, query, key, verbose):
+def do_chunks(init, proc, src_col, dest_col, query, key, verbose):
     while housekeep.objects(state = 'done').count() < housekeep.objects.count():
         tnow = datetime.datetime.utcnow()
         raw = housekeep._collection.find_and_modify(
@@ -180,7 +180,7 @@ def mmap(   cb,
         if not defer:
             if sys.argv[0] == "" or sys.argv[0][-8:] == "/ipython":
                 print >> sys.stderr, ("WARNING -- can't generate module name. Multiprocessing will be emulated...")
-                _do_chunks(cb_init, cb, dbs[source_col], dest, query, key, verbose)
+                do_chunks(cb_init, cb, dbs[source_col], dest, query, key, verbose)
             else:
                 cb_mod = sys.argv[0][:-3]
                 cmd = "python worker.py %s %s %s %s --src_uri='%s' --dest_uri='%s' --init='%s' --query='%s' --key=%s --verbose=%s &" % (cb_mod, cb.__name__, source_col, dest_col,
@@ -188,7 +188,7 @@ def mmap(   cb,
                 if verbose & 2: print "os.system:", cmd
                 for j in range(multi):
                     os.system(cmd)
-    if wait_done:
+    if wait_done and (not multi == None):
         wait(timeout, verbose & 2)
     return dbd[dest_col]
 

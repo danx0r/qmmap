@@ -55,13 +55,14 @@ if __name__ == "__main__":
             db.mongoo_dest.drop()
             db.mongoo_src_mongoo_dest.drop()
     
+    print "Running mmap..."
     t = time.time()
     mongoo.mmap(process, "mongoo_src", "mongoo_dest", multi=config.processes, verbose=config.verbose)
     print "time processing:", time.time() - t, "seconds"
     print "representative output:"
 #     print list(db.mongoo_dest.find())
-    for o in mongoo_dest.objects.limit(2):
-        print o.s
+    for o in mongoo_dest.objects.limit(3):
+        print o.s[:20]
     print
 
     #inspect housekeeping collection for fun & profit

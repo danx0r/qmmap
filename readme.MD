@@ -73,5 +73,28 @@ print list(ret.find())
 [{u'_id': 10}, {u'_id': 20}, {u'_id': 30}, {u'_id': 40}, {u'_id': 50}, {u'_id': 60}, {u'_id': 70}, {u'_id': 80}, {u'_id': 90}, {u'_id': 100}, {u'_id': 0}]
 ```
 
-mongoo doesn't (presently) support multiple CPU's from the command line, so we get a warning. Run ```test_mongoengine.py``` to see multiple CPU's work for real.
+mongoo doesn't (presently) support multiple CPU's from the command line, so we get a warning. Let's run ```test.py``` to see multiple CPU's work for real:
 
+```Python
+python test.py
+drop mongoo_src, mongoo_dest, housekeeping(mongoo_src_mongoo_dest)?y
+Generating test data, this may be slow...
+Running mmap...
+time processing: 18.1320679188 seconds
+representative output:
+BQZWVQTIEWZWHNERPLCP
+FSLTFLDAYTKHWCHKWTTX
+BRYOCRKDJGTBZCKMMSIG
+```
+On my machine using one process this took about 18 seconds. Let's try to use all 4 cores:
+```Python
+python test.py 4 --skipdata
+drop mongoo_dest, housekeeping(mongoo_src_mongoo_dest)?y
+Running mmap...
+time processing: 6.23155999184 seconds
+representative output:
+BQZWVQTIEWZWHNERPLCP
+FVPKESQNSFVIHUQQOJCX
+UXSIJIMOOHGBFWGGSENP
+```
+Six seconds - about 3 times faster. Larger data sets should provide even better results; speedup should approach the number of CPU's available.

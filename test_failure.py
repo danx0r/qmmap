@@ -29,18 +29,25 @@ def process(source):
  
 if __name__ == "__main__":
     import pymongo, time
-    os.system("python make_source.py mongodb://127.0.0.1/test 33")
-    mongoo.mmap(process, "mongoo_src", "mongoo_dest", cb_init=init, multi=10, verbose=3, timeout=10)
     db = pymongo.MongoClient("mongodb://127.0.0.1/test").get_default_database()
-    print "output:"
-#     print list(db.mongoo_dest.find())
+
+    if raw_input("drop mongoo_src, mongoo_dest, housekeeping(mongoo_src_mongoo_dest)?")[:1] == 'y':
+        db.mongoo_src.drop()
+        db.mongoo_dest.drop()
+        db.mongoo_src_mongoo_dest.drop()
+
+    for i in range(10):
+        db.mongoo_src.save({'_id': i})
+
+    mongoo.mmap(process, "mongoo_src", "mongoo_dest", cb_init=init, multi=10, verbose=3, timeout=10)
+
     for o in mongoo_dest.objects:
         print o.val,
     print
-    good = 0
-    total = 0
 
     #inspect housekeeping collection for fun & profit
+    good = 0
+    total = 0
     for hk in db.mongoo_src_mongoo_dest.find():
         good += hk['good']
         total += hk['total']

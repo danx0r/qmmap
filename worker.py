@@ -2,7 +2,7 @@
 # mongoo worker invoked as command-line script
 #
 import sys, os, importlib, argparse, json, pymongo
-from mongoo import _do_chunks, connectMongoEngine, housekeep
+from mongoo import do_chunks, connectMongoEngine, housekeep
 from mongoengine.context_managers import switch_collection
 
 par = argparse.ArgumentParser(description = "Mongoo worker process")
@@ -36,5 +36,5 @@ hk_colname = source.name + '_' + dest.name
 switch_collection(housekeep, hk_colname).__enter__()
 
 # print "DEBUG start worker", os.getpid()
-_do_chunks(init, cb, source, dest, query, config.key, config.verbose)
+do_chunks(init, cb, source, dest, query, config.key, config.verbose)
 # print "DEBUG end worker", os.getpid()
