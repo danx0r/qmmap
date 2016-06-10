@@ -138,7 +138,7 @@ def _calc_chunksize(count, multi):
 #     if verbose & 2: print "chunk size:", cs
 #     if verbose & 2: print "chunk count:", count / float(cs)
 #     if verbose & 2: print "per proc:", count / float(cs * multi)
-    return cs
+    return int(cs)
 
 # cs = _calc_chunksize(11, 3)
 # cs = _calc_chunksize(20, 1)
