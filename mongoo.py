@@ -1,12 +1,13 @@
 #
 # mongo Operations
 #
-import sys, os, importlib, datetime, time, traceback
+import sys, os, importlib, datetime, time, traceback, __main__
 import pymongo
 import mongoengine as meng
 from mongoengine.context_managers import switch_collection
 
 NULL = open(os.devnull, "w")
+SHELL = not hasattr(__main__, '__file__')
 
 class housekeep(meng.Document):
     start = meng.DynamicField(primary_key = True)
@@ -173,7 +174,7 @@ def mmap(   cb,
         chunk_size = _calc_chunksize(dbs[source_col].count(), multi)
         if verbose & 2: print "chunk size:", chunk_size
         _init(dbs[source_col], dest, key, query, chunk_size, verbose)
-        if sys.argv[0] == "" or sys.argv[0][-8:] == "/ipython":
+        if SHELL:
             print >> sys.stderr, ("WARNING -- can't generate module name. Multiprocessing will be emulated...")
             do_chunks(init, cb, dbs[source_col], dest, query, key, verbose)
         else:
