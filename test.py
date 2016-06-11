@@ -30,7 +30,7 @@ def randstring(size):
 if __name__ == "__main__":
     import pymongo, time
     db = pymongo.MongoClient("mongodb://127.0.0.1/test").get_default_database()
-    meng.connect()
+    meng.connect("test")
 
     par = argparse.ArgumentParser(description = "Mongoo test large data set")
     par.add_argument("processes", type=int, nargs='?', default=1)
