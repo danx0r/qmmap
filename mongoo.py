@@ -22,10 +22,12 @@ class housekeep(meng.Document):
     time = meng.DateTimeField()  # Time when job finished
     meta = {'indexes': ['state', 'time']}
 
-def _init(srccol, destcol, key, query, chunk_size, verbose):
+def _connect(srccol, destcol):
     connectMongoEngine(destcol)
     hk_colname = srccol.name + '_' + destcol.name
     switch_collection(housekeep, hk_colname).__enter__()
+
+def _init(srccol, destcol, key, query, chunk_size, verbose):
     housekeep.drop_collection()
     q = srccol.find(query, [key]).sort([(key, pymongo.ASCENDING)])
     if verbose & 2: print "initializing %d entries, housekeeping for %s" % (q.count(), housekeep._get_collection_name())
@@ -162,6 +164,8 @@ def mmap(   cb,
             verbose=1,
             multi=None,
             wait_done=True,
+            init_only=False,
+            process_only=False,
             timeout=120):
 
     dbs = pymongo.MongoClient(source_uri).get_default_database()
@@ -171,21 +175,24 @@ def mmap(   cb,
         source = dbs[source_col].find(query)
         _process(init, cb, source, dest, verbose)
     else:
-        chunk_size = _calc_chunksize(dbs[source_col].count(), multi)
-        if verbose & 2: print "chunk size:", chunk_size
-        _init(dbs[source_col], dest, key, query, chunk_size, verbose)
-        if SHELL:
-            print >> sys.stderr, ("WARNING -- can't generate module name. Multiprocessing will be emulated...")
-            do_chunks(init, cb, dbs[source_col], dest, query, key, verbose)
-        else:
-            cb_mod = sys.argv[0][:-3]
-            cmd = "python worker.py %s %s %s %s --src_uri='%s' --dest_uri='%s' --init='%s' --query='%s' --key=%s --verbose=%s &" % (cb_mod, cb.__name__, source_col, dest_col,
-                                                            source_uri, dest_uri, init.__name__ if init else '', query, key, verbose)
-            if verbose & 2: print "os.system:", cmd
-            for j in range(multi):
-                os.system(cmd)
-    if wait_done and (not multi == None):
-        wait(timeout, verbose & 2)
+        _connect(dbs[source_col], dest)
+        if not process_only:
+            chunk_size = _calc_chunksize(dbs[source_col].count(), multi)
+            if verbose & 2: print "chunk size:", chunk_size
+            _init(dbs[source_col], dest, key, query, chunk_size, verbose)
+        if not init_only:
+            if SHELL:
+                print >> sys.stderr, ("WARNING -- can't generate module name. Multiprocessing will be emulated...")
+                do_chunks(init, cb, dbs[source_col], dest, query, key, verbose)
+            else:
+                cb_mod = sys.argv[0][:-3]
+                cmd = "python worker.py %s %s %s %s --src_uri='%s' --dest_uri='%s' --init='%s' --query='%s' --key=%s --verbose=%s &" % (cb_mod, cb.__name__, source_col, dest_col,
+                                                                source_uri, dest_uri, init.__name__ if init else '', query, key, verbose)
+                if verbose & 2: print "os.system:", cmd
+                for j in range(multi):
+                    os.system(cmd)
+            if wait_done:
+                wait(timeout, verbose & 2)
     return dbd[dest_col]
 
 def toMongoEngine(pmobj, metype):
@@ -213,6 +220,7 @@ def remaining():
 def wait(timeout=120, verbose=True):
     t = time.time()
     r = remaining()
+    print "DEBUG count rem:", r
     rr = r
     while r:
 #         print "DEBUG r %f rr %f t %f" % (r, rr, time.time() - t)

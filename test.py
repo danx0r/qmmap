@@ -38,29 +38,33 @@ if __name__ == "__main__":
     par.add_argument("num", type=int, nargs='?', default=10000)
     par.add_argument("--verbose", type=int, default = 1)
     par.add_argument("--skipdata", action='store_true')
+    par.add_argument("--init_only", action='store_true')
+    par.add_argument("--process_only", action='store_true')
     
     config = par.parse_args()
 
-    if not config.skipdata:
-        if raw_input("drop mongoo_src, mongoo_dest, housekeeping(mongoo_src_mongoo_dest)?")[:1] == 'y':
-            db.mongoo_src.drop()
-            db.mongoo_dest.drop()
-            db.mongoo_src_mongoo_dest.drop()
-    
-        print "Generating test data, this may be slow..."
-        for i in range(config.num):
-            src = mongoo_src()
-            src.s1 = randstring(config.size)
-            src.s2 = randstring(config.size)
-            src.save()
-    else:
-        if raw_input("drop mongoo_dest, housekeeping(mongoo_src_mongoo_dest)?")[:1] == 'y':
-            db.mongoo_dest.drop()
-            db.mongoo_src_mongoo_dest.drop()
+    if not config.process_only:
+        if not config.skipdata:
+            if raw_input("drop mongoo_src, mongoo_dest, housekeeping(mongoo_src_mongoo_dest)?")[:1] == 'y':
+                db.mongoo_src.drop()
+                db.mongoo_dest.drop()
+                db.mongoo_src_mongoo_dest.drop()
+        
+            print "Generating test data, this may be slow..."
+            for i in range(config.num):
+                src = mongoo_src()
+                src.s1 = randstring(config.size)
+                src.s2 = randstring(config.size)
+                src.save()
+        else:
+            if raw_input("drop mongoo_dest, housekeeping(mongoo_src_mongoo_dest)?")[:1] == 'y':
+                db.mongoo_dest.drop()
+                db.mongoo_src_mongoo_dest.drop()
     
     print "Running mmap..."
     t = time.time()
-    mongoo.mmap(process, "mongoo_src", "mongoo_dest", init=init, multi=config.processes, verbose=config.verbose)
+    mongoo.mmap(process, "mongoo_src", "mongoo_dest", init=init, multi=config.processes, 
+                verbose=config.verbose, init_only=config.init_only, process_only=config.process_only)
     print "time processing:", time.time() - t, "seconds"
     print "representative output:"
 #     print list(db.mongoo_dest.find())
