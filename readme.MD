@@ -98,3 +98,44 @@ FVPKESQNSFVIHUQQOJCX
 UXSIJIMOOHGBFWGGSENP
 ```
 Six seconds - about 3 times faster. Larger data sets should provide even better results; speedup should approach the number of CPU's available.
+
+Multiple separate machines can operate on the same data, as a compute cluster. To accomplish this, we break up the processing into an initialization phase which runs first, then run a process phase on multiple nodes:
+
+```Python
+python test.py 4 --skipdata --init_only
+drop mongoo_dest, housekeeping(mongoo_src_mongoo_dest)?y
+Running mmap...
+time processing: 0.20853805542 seconds
+representative output:
+
+0 succesful operations out of 10000
+```
+
+Now we start processing on two "nodes" (for now, we will test in two shells on the same machine):
+
+Shell 1:
+```Python
+python test.py 2 --skipdata --process_only --verbose=0
+Running mmap...
+time processing: 6.0252699852 seconds
+representative output:
+WXRHAXPHZLYLDQZWPLPS
+XVFKIXHPOBTUZFKPMGRD
+PVKUCFRLANQXCMCBQKXC
+
+10000 succesful operations out of 10000
+```
+
+Shell 2:
+```Python
+python test.py 2 --skipdata --process_only --verbose=0
+Running mmap...
+time processing: 4.03092908859 seconds
+representative output:
+WXRHAXPHZLYLDQZWPLPS
+XVFKIXHPOBTUZFKPMGRD
+PVKUCFRLANQXCMCBQKXC
+
+10000 succesful operations out of 10000
+```
+

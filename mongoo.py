@@ -220,7 +220,6 @@ def remaining():
 def wait(timeout=120, verbose=True):
     t = time.time()
     r = remaining()
-    print "DEBUG count rem:", r
     rr = r
     while r:
 #         print "DEBUG r %f rr %f t %f" % (r, rr, time.time() - t)
