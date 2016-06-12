@@ -9,8 +9,10 @@ class mongoo_src(meng.Document):
 class mongoo_dest(meng.Document):
     s = meng.StringField()
 
+# if defined, this will run at start of each chunk
 def init(source_cursor, destination_collection):
-    print "processing %d documents from %s to %s" % (source_cursor.count(), source_cursor.collection.name, destination_collection.name)
+#     print "processing %d documents from %s to %s" % (source_cursor.count(), source_cursor.collection.name, destination_collection.name)
+    pass
 
 def process(source):
     gs = mongoo.toMongoEngine(source, mongoo_src)
