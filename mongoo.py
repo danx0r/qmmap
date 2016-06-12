@@ -7,7 +7,9 @@ import mongoengine as meng
 from mongoengine.context_managers import switch_collection
 
 NULL = open(os.devnull, "w")
-SHELL = not hasattr(__main__, '__file__')
+
+def is_shell():
+    return sys.argv[0] == "" or sys.argv[0][-8:] == "/ipython"
 
 class housekeep(meng.Document):
     start = meng.DynamicField(primary_key = True)
@@ -181,7 +183,7 @@ def mmap(   cb,
             if verbose & 2: print "chunk size:", chunk_size
             _init(dbs[source_col], dest, key, query, chunk_size, verbose)
         if not init_only:
-            if SHELL:
+            if is_shell():
                 print >> sys.stderr, ("WARNING -- can't generate module name. Multiprocessing will be emulated...")
                 do_chunks(init, cb, dbs[source_col], dest, query, key, verbose)
             else:
