@@ -4,11 +4,10 @@
 
 MongoO is a lightweight library that enables asynchronous, parallel processing of MongoDB documents using a simple, map-like interface.
 
-Python's `map` function takes a callback function and applies it to a list, returning a list.
+*The following examples were created in IPython, an excellent tool. Cut and paste these examples into your IPython notebook:*
 
-The following examples were created in IPython, an excellent tool.
+Python's `map` function takes a callback function and applies it to a list, returning a list:
 
-*Cut and paste these examples into your IPython notebook:*
 ```Python
 src = [x for x in range(10)]
 def func(v):
