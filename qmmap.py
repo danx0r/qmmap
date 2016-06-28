@@ -198,11 +198,6 @@ def mmap(   cb,
     return dbd[dest_col]
 
 def toMongoEngine(pmobj, metype):
-#     meobj = metype()
-#     for key in pmobj:
-#         if hasattr(meobj, key) and key != '_id' and key in pmobj:
-#             meobj[key] = pmobj[key]
-#     meobj[type(meobj).id.name] = pmobj['_id']
     meobj = metype._from_son(pmobj)
     meobj.validate()
     return meobj
