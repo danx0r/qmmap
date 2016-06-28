@@ -1,12 +1,12 @@
 import os, sys, time, random, argparse
 import mongoengine as meng
-import mongoo
+import qmmap
 
-class mongoo_src(meng.Document):
+class qmmap_src(meng.Document):
     s1 = meng.StringField()
     s2 = meng.StringField()
 
-class mongoo_dest(meng.Document):
+class qmmap_dest(meng.Document):
     s = meng.StringField()
 
 # if defined, this will run at start of each chunk
@@ -15,12 +15,12 @@ def init(source_cursor, destination_collection):
     pass
 
 def process(source):
-    gs = mongoo.toMongoEngine(source, mongoo_src)
+    gs = qmmap.toMongoEngine(source, qmmap_src)
     s = ""
     for i in range(len(gs.s1)):
         s += gs.s1[i]
         s += gs.s2[i]
-    gd = mongoo_dest(s = s)
+    gd = qmmap_dest(s = s)
     return gd.to_mongo()
 
 def randstring(size):
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     db = pymongo.MongoClient("mongodb://127.0.0.1/test").get_default_database()
     meng.connect("test")
 
-    par = argparse.ArgumentParser(description = "Mongoo test large data set")
+    par = argparse.ArgumentParser(description = "qmmap test large data set")
     par.add_argument("processes", type=int, nargs='?', default=1)
     par.add_argument("size", type=int, nargs='?', default=500)
     par.add_argument("num", type=int, nargs='?', default=10000)
@@ -47,37 +47,37 @@ if __name__ == "__main__":
 
     if not config.process_only:
         if not config.skipdata:
-            if raw_input("drop mongoo_src, mongoo_dest, housekeeping(mongoo_src_mongoo_dest)?")[:1] == 'y':
-                db.mongoo_src.drop()
-                db.mongoo_dest.drop()
-                db.mongoo_src_mongoo_dest.drop()
+            if raw_input("drop qmmap_src, qmmap_dest, housekeeping(qmmap_src_qmmap_dest)?")[:1] == 'y':
+                db.qmmap_src.drop()
+                db.qmmap_dest.drop()
+                db.qmmap_src_qmmap_dest.drop()
         
             print "Generating test data, this may be slow..."
             for i in range(config.num):
-                src = mongoo_src()
+                src = qmmap_src()
                 src.s1 = randstring(config.size)
                 src.s2 = randstring(config.size)
                 src.save()
         else:
-            if raw_input("drop mongoo_dest, housekeeping(mongoo_src_mongoo_dest)?")[:1] == 'y':
-                db.mongoo_dest.drop()
-                db.mongoo_src_mongoo_dest.drop()
+            if raw_input("drop qmmap_dest, housekeeping(qmmap_src_qmmap_dest)?")[:1] == 'y':
+                db.qmmap_dest.drop()
+                db.qmmap_src_qmmap_dest.drop()
     
     print "Running mmap..."
     t = time.time()
-    mongoo.mmap(process, "mongoo_src", "mongoo_dest", init=init, multi=config.processes, 
+    qmmap.mmap(process, "qmmap_src", "qmmap_dest", init=init, multi=config.processes, 
                 verbose=config.verbose, init_only=config.init_only, process_only=config.process_only)
     print "time processing:", time.time() - t, "seconds"
     print "representative output:"
-#     print list(db.mongoo_dest.find())
-    for o in mongoo_dest.objects.limit(3):
+#     print list(db.qmmap_dest.find())
+    for o in qmmap_dest.objects.limit(3):
         print o.s[:20]
     print
 
     #inspect housekeeping collection for fun & profit
     good = 0
     total = 0
-    for hk in db.mongoo_src_mongoo_dest.find():
+    for hk in db.qmmap_src_qmmap_dest.find():
         good += hk['good']
         total += hk['total']
     print "%d succesful operations out of %d" % (good, total)

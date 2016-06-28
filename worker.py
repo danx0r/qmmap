@@ -1,11 +1,11 @@
 #
-# mongoo worker invoked as command-line script
+# qmmap worker invoked as command-line script
 #
 import sys, os, importlib, argparse, json, pymongo
-from mongoo import do_chunks, connectMongoEngine, housekeep
+from qmmap import do_chunks, connectMongoEngine, housekeep
 from mongoengine.context_managers import switch_collection
 
-par = argparse.ArgumentParser(description = "Mongoo worker process")
+par = argparse.ArgumentParser(description = "qmmap worker process")
 par.add_argument("module")
 par.add_argument("function")
 par.add_argument("source")

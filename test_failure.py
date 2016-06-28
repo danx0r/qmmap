@@ -1,11 +1,11 @@
 import os, sys, time, random
 import mongoengine as meng
-import mongoo
+import qmmap
 
-class mongoo_src(meng.Document):
+class qmmap_src(meng.Document):
     num = meng.IntField(primary_key = True)
   
-class mongoo_dest(meng.Document):
+class qmmap_dest(meng.Document):
     val = meng.IntField(primary_key = True)
 
 #this gets called (if defined) before processing each worker
@@ -20,9 +20,9 @@ def process(source):
         print >> sys.stderr, "EXEUNT WORKER"
         return
 
-    gs = mongoo.toMongoEngine(source, mongoo_src)
+    gs = qmmap.toMongoEngine(source, qmmap_src)
     
-    gd = mongoo_dest(val = gs.num * 10)
+    gd = qmmap_dest(val = gs.num * 10)
     print os.getpid(), "  processed %s" % gs.num
     time.sleep(.5) #slow for testing
     return gd.to_mongo()
@@ -31,24 +31,24 @@ if __name__ == "__main__":
     import pymongo, time
     db = pymongo.MongoClient("mongodb://127.0.0.1/test").get_default_database()
 
-    if raw_input("drop mongoo_src, mongoo_dest, housekeeping(mongoo_src_mongoo_dest)?")[:1] == 'y':
-        db.mongoo_src.drop()
-        db.mongoo_dest.drop()
-        db.mongoo_src_mongoo_dest.drop()
+    if raw_input("drop qmmap_src, qmmap_dest, housekeeping(qmmap_src_qmmap_dest)?")[:1] == 'y':
+        db.qmmap_src.drop()
+        db.qmmap_dest.drop()
+        db.qmmap_src_qmmap_dest.drop()
 
     for i in range(10):
-        db.mongoo_src.save({'_id': i})
+        db.qmmap_src.save({'_id': i})
 
-    mongoo.mmap(process, "mongoo_src", "mongoo_dest", cb_init=init, multi=10, verbose=3, timeout=10)
+    qmmap.mmap(process, "qmmap_src", "qmmap_dest", cb_init=init, multi=10, verbose=3, timeout=10)
 
-    for o in mongoo_dest.objects:
+    for o in qmmap_dest.objects:
         print o.val,
     print
 
     #inspect housekeeping collection for fun & profit
     good = 0
     total = 0
-    for hk in db.mongoo_src_mongoo_dest.find():
+    for hk in db.qmmap_src_qmmap_dest.find():
         good += hk['good']
         total += hk['total']
     print "%d succesful operations out of %d" % (good, total)

@@ -3,18 +3,18 @@ def process(source):
     return {'_id': source['_id']*10}
 
 if __name__ == "__main__":
-    import os, pymongo, mongoo, time
+    import os, pymongo, qmmap, time
 
     db = pymongo.MongoClient("mongodb://127.0.0.1/test").get_default_database()
 
-    if raw_input("drop mongoo_src, mongoo_dest, housekeeping(mongoo_src_mongoo_dest)?")[:1] == 'y':
-        db.mongoo_src.drop()
-        db.mongoo_dest.drop()
-        db.mongoo_src_mongoo_dest.drop()
+    if raw_input("drop qmmap_src, qmmap_dest, housekeeping(qmmap_src_qmmap_dest)?")[:1] == 'y':
+        db.qmmap_src.drop()
+        db.qmmap_dest.drop()
+        db.qmmap_src_qmmap_dest.drop()
 
     for i in range(10):
-        db.mongoo_src.save({'_id': i})
+        db.qmmap_src.save({'_id': i})
 
-    ret = mongoo.mmap(process, "mongoo_src", "mongoo_dest", multi=None)
+    ret = qmmap.mmap(process, "qmmap_src", "qmmap_dest", multi=None)
     
     print "output:", list(ret.find())

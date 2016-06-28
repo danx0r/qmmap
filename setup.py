@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 from distutils.core import setup
 
-setup(name='mongoo',
+setup(name='qmmap',
       version='0.001',
-      description='Mongo Operations',
-      url='https://github.com/gitorgstars/mongoo/',
+      description='Parallel MongoDB Map',
+      url='https://github.com/hiqlabs/qmmap/',
       scripts=[],
      )

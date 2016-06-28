@@ -1,8 +1,8 @@
-#MongoO
+#qmMap
 
 ##MongoDB Operations in parallel
 
-MongoO is a lightweight library that enables asynchronous, parallel processing of MongoDB documents using a simple, map-like interface.
+qmMap is a lightweight library that enables asynchronous, parallel processing of MongoDB documents using a simple, map-like interface.
 
 *The following examples were created in IPython, an excellent tool. Cut and paste these examples into your IPython notebook:*
 
@@ -20,50 +20,50 @@ print map(func, src)
 
     [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
 
-MongoO provides a similar function, ```mmap```, that operates on MongoDB collections:
+qmMap provides a similar function, ```mmap```, that operates on MongoDB collections:
 
 ```Python
 # assumes mongodb running locally, database named 'test'
 import pymongo
-from mongoo import mmap
+from qmmap import mmap
 
 db = pymongo.MongoClient().test
 
 for i in range(10):
-    db.mongoo_in.save({'_id': i})
+    db.qmmap_in.save({'_id': i})
 
 def func(source):
     return {'_id': source['_id']*10}
 
-ret = mmap(func, "mongoo_in", "mongoo_out")
+ret = mmap(func, "qmmap_in", "qmmap_out")
 print list(ret.find())
 ```
     [{u'_id': 0}, {u'_id': 10}, {u'_id': 20}, {u'_id': 30}, {u'_id': 40}, {u'_id': 50}, {u'_id': 60}, {u'_id': 70}, {u'_id': 80}, {u'_id': 90}]
 
-MongoO has helper functions to support mongoengine classes:
+qmMap has helper functions to support mongoengine classes:
 
 ```Python
 from mongoengine import Document, IntField, connect
-from mongoo import toMongoEngine, connectMongoEngine
+from qmmap import toMongoEngine, connectMongoEngine
 connect("test")
 
-class mongoo_in(Document):
+class qmmap_in(Document):
     num = IntField(primary_key = True)
 
-class mongoo_out(Document):
+class qmmap_out(Document):
     val = IntField(primary_key = True)
 
 def init(source, dest):
     connectMongoEngine(dest)
 
 def func(source):
-    gs = toMongoEngine(source, mongoo_in)
-    gd = mongoo_out(val = gs.num * 10)
+    gs = toMongoEngine(source, qmmap_in)
+    gd = qmmap_out(val = gs.num * 10)
     return gd.to_mongo()
 
-ret = mmap(func, "mongoo_in", "mongoo_out")
+ret = mmap(func, "qmmap_in", "qmmap_out")
 
-for o in mongoo_out.objects:
+for o in qmmap_out.objects:
     print o.val,
 ```
 
@@ -72,14 +72,14 @@ for o in mongoo_out.objects:
 We can leverage multiple CPU's by specifying the ```multi``` parameter:
 
 ```Python
-ret = mmap(func, "mongoo_in", "mongoo_out", multi=2)
+ret = mmap(func, "qmmap_in", "qmmap_out", multi=2)
 ```
 
 ```
 WARNING -- can't generate module name. Multiprocessing will be emulated...
 ```
 
-mongoo doesn't (presently) support multiple CPU's from the command line, so we get a warning.
+qmMap doesn't (presently) support multiple CPU's from the command line, so we get a warning.
 
 
 ```Python
@@ -95,7 +95,7 @@ run test.py
 ```
 
 ```
-drop mongoo_in, mongoo_out, housekeeping(mongoo_in_mongoo_out)?y
+drop qmmap_in, qmmap_out, housekeeping(qmmap_in_qmmap_out)?y
 Generating test data, this may be slow...
 Running mmap...
 time processing: 18.1320679188 seconds
@@ -112,7 +112,7 @@ run test.py 4 --skipdata
 ```
 
 ```
-drop mongoo_out, housekeeping(mongoo_in_mongoo_out)?y
+drop qmmap_out, housekeeping(qmmap_in_qmmap_out)?y
 Running mmap...
 time processing: 6.23155999184 seconds
 representative output:
@@ -130,7 +130,7 @@ run test.py 4 --skipdata --init_only
 ```
 
 ```
-drop mongoo_out, housekeeping(mongoo_in_mongoo_out)?y
+drop qmmap_out, housekeeping(qmmap_in_qmmap_out)?y
 Running mmap...
 time processing: 0.20853805542 seconds
 representative output:
