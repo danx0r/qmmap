@@ -39,7 +39,7 @@ if __name__ == "__main__":
     for i in range(10):
         db.qmmap_src.save({'_id': i})
 
-    qmmap.mmap(process, "qmmap_src", "qmmap_dest", cb_init=init, multi=10, verbose=3, timeout=10)
+    qmmap.mmap(process, "qmmap_src", "qmmap_dest", init=init, multi=10, verbose=3, timeout=10)
 
     for o in qmmap_dest.objects:
         print o.val,
