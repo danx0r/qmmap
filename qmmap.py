@@ -1,7 +1,9 @@
+#!/usr/bin/env python
+
 #
 # mongo Operations
 #
-import sys, os, importlib, datetime, time, traceback, __main__
+import argparse, sys, os, importlib, datetime, time, traceback, __main__
 import pymongo
 import mongoengine as meng
 from mongoengine.context_managers import switch_collection
@@ -231,3 +233,56 @@ def wait(timeout=120, verbose=True):
         time.sleep(1)
         rr = r
         r = remaining()
+
+if __name__ == "__main__":
+    import pymongo, time
+    db = pymongo.MongoClient("mongodb://127.0.0.1/test").get_default_database()
+    meng.connect("test")
+
+    par = argparse.ArgumentParser(description = "qmmap test large data set")
+    par.add_argument("processes", type=int, nargs='?', default=1)
+    par.add_argument("size", type=int, nargs='?', default=500)
+    par.add_argument("num", type=int, nargs='?', default=10000)
+    par.add_argument("--verbose", type=int, default = 1)
+    par.add_argument("--skipdata", action='store_true')
+    par.add_argument("--init_only", action='store_true')
+    par.add_argument("--process_only", action='store_true')
+    
+    config = par.parse_args()
+
+    if not config.process_only:
+        if not config.skipdata:
+            if raw_input("drop qmmap_src, qmmap_dest, housekeeping(qmmap_src_qmmap_dest)?")[:1] == 'y':
+                db.qmmap_src.drop()
+                db.qmmap_dest.drop()
+                db.qmmap_src_qmmap_dest.drop()
+        
+            print "Generating test data, this may be slow..."
+            for i in range(config.num):
+                src = qmmap_src()
+                src.s1 = randstring(config.size)
+                src.s2 = randstring(config.size)
+                src.save()
+        else:
+            if raw_input("drop qmmap_dest, housekeeping(qmmap_src_qmmap_dest)?")[:1] == 'y':
+                db.qmmap_dest.drop()
+                db.qmmap_src_qmmap_dest.drop()
+    
+    print "Running mmap..."
+    t = time.time()
+    qmmap.mmap(process, "qmmap_src", "qmmap_dest", init=init, multi=config.processes, 
+                verbose=config.verbose, init_only=config.init_only, process_only=config.process_only)
+    print "time processing:", time.time() - t, "seconds"
+    print "representative output:"
+#     print list(db.qmmap_dest.find())
+    for o in qmmap_dest.objects.limit(3):
+        print o.s[:20]
+    print
+
+    #inspect housekeeping collection for fun & profit
+    good = 0
+    total = 0
+    for hk in db.qmmap_src_qmmap_dest.find():
+        good += hk['good']
+        total += hk['total']
+    print "%d succesful operations out of %d" % (good, total)
