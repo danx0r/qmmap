@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #
 # qmmap worker invoked as command-line script
 #
