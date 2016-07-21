@@ -190,6 +190,8 @@ def mmap(   cb,
                 cb_mod = sys.argv[0][:-3]
                 cmd = "qmmap_worker.py %s %s %s %s --src_uri='%s' --dest_uri='%s' --init='%s' --query='%s' --key=%s --verbose=%s &" % (cb_mod, cb.__name__, source_col, dest_col,
                                                                 source_uri, dest_uri, init.__name__ if init else '', query, key, verbose)
+                print "sys.argv=%s" % sys.argv
+                print cmd
                 if verbose & 2: print "os.system:", cmd
                 for j in range(multi):
                     os.system(cmd)
