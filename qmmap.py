@@ -187,8 +187,9 @@ def mmap(   cb,
                 print >> sys.stderr, ("WARNING -- can't generate module name. Multiprocessing will be emulated...")
                 do_chunks(init, cb, dbs[source_col], dest, query, key, verbose)
             else:
-                cb_mod = sys.argv[0][:-3]
-                cmd = "qmmap_worker.py %s %s %s %s --src_uri='%s' --dest_uri='%s' --init='%s' --query='%s' --key=%s --verbose=%s &" % (cb_mod, cb.__name__, source_col, dest_col,
+                cb_mod = sys.argv[0][:-3].replace('/', '.')
+                module_abspath = os.path.abspath(os.path.dirname(cb_mod))
+                cmd = "qmmap_worker.py %s %s %s %s %s --src_uri='%s' --dest_uri='%s' --init='%s' --query='%s' --key=%s --verbose=%s &" % (module_abspath, cb_mod, cb.__name__, source_col, dest_col,
                                                                 source_uri, dest_uri, init.__name__ if init else '', query, key, verbose)
                 print "sys.argv=%s" % sys.argv
                 print cmd
