@@ -5,5 +5,5 @@ setup(name='qmmap',
       version='0.001',
       description='Parallel MongoDB Map',
       url='https://github.com/hiqlabs/qmmap/',
-      scripts=[],
+      scripts=["qmmap_worker.py"],
      )
