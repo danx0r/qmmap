@@ -187,7 +187,7 @@ def mmap(   cb,
         if not init_only:
             args = (init, cb, dbs[source_col], dest, query, key, verbose)
             if verbose & 2:
-                print "Chunking with arguments %s" % args
+                print "Chunking with arguments %s" % (args,)
             if is_shell():
                 print >> sys.stderr, ("WARNING -- can't generate module name. Multiprocessing will be emulated...")
                 do_chunks(*args)
