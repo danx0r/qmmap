@@ -3,6 +3,7 @@
 #
 import sys, os, importlib, datetime, time, traceback, __main__
 import pymongo
+import threading
 import mongoengine as meng
 from mongoengine.context_managers import switch_collection
 
@@ -174,6 +175,7 @@ def mmap(   cb,
     dbd = pymongo.MongoClient(dest_uri).get_default_database()
     dest = dbd[dest_col]
     if multi == None:           #don't use housekeeping, run straight process
+
         source = dbs[source_col].find(query)
         _process(init, cb, source, dest, verbose)
     else:
@@ -183,17 +185,17 @@ def mmap(   cb,
             if verbose & 2: print "chunk size:", chunk_size
             _init(dbs[source_col], dest, key, query, chunk_size, verbose)
         if not init_only:
+            args = (init, cb, dbs[source_col], dest, query, key, verbose)
+            if verbose & 2:
+                print "Chunking with arguments %s" % args
             if is_shell():
                 print >> sys.stderr, ("WARNING -- can't generate module name. Multiprocessing will be emulated...")
-                do_chunks(init, cb, dbs[source_col], dest, query, key, verbose)
+                do_chunks(*args)
             else:
-                cb_mod = sys.argv[0][:-3].replace('/', '.')
-                module_abspath = os.path.abspath(os.path.dirname(cb_mod))
-                cmd = "qmmap_worker.py %s %s %s %s %s --src_uri='%s' --dest_uri='%s' --init='%s' --query='%s' --key=%s --verbose=%s &" % (module_abspath, cb_mod, cb.__name__, source_col, dest_col,
-                                                                source_uri, dest_uri, init.__name__ if init else '', query, key, verbose)
-                if verbose & 2: print "os.system:", cmd
-                for j in range(multi):
-                    os.system(cmd)
+                for j in xrange(multi):
+                    if verbose & 2:
+                        print "Launching subprocess %s" % j
+                    threading.Thread(target=do_chunks, args=args).start()
             if wait_done:
                 wait(timeout, verbose & 2)
     return dbd[dest_col]
@@ -205,8 +207,10 @@ def toMongoEngine(pmobj, metype):
 
 def connectMongoEngine(pmcol):
     if pymongo.version_tuple[0] == 2:     #really? REALLY?
-        host = pmcol.database.connection.HOST
-        port = pmcol.database.connection.PORT
+        #host = pmcol.database.connection.HOST
+        #port = pmcol.database.connection.PORT
+        host = pmcol.database.connection.host
+        port = pmcol.database.connection.port
     else:
         host = pmcol.database.client.HOST
         port = pmcol.database.client.PORT
