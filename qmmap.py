@@ -280,7 +280,7 @@ def manage(timeout, sleep=120):
     print "Managing job's execution; currently {0} remaining".format(num_not_done)
     sys.stdout.flush()
     # Keep going until none are state=working or done
-    while _num_at_state('open') > 0 or _num_at_state('working') > 0:
+    while _num_not_at_state('done') > 0:
         # Sleep before management step
         time.sleep(sleep)
         _print_progress()
