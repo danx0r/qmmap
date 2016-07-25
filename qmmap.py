@@ -291,7 +291,6 @@ def manage(timeout, sleep=120):
         hkwquery = [h for h in housekeep.objects(state='working').only('tstart', 'start').all()]
         for hkw in hkwquery:
             # .tstart must have time value for state to equal 'working' at all
-            # See mongoo_process
             time_taken = (tnow-hkw.tstart).total_seconds()
             print u"Chunk starting at {0} has been working for {1} sec".format(
                 hkw.start, time_taken)
@@ -304,4 +303,3 @@ def manage(timeout, sleep=120):
                 hkw.state = "open"
                 hkw.save()
     print "----------- PROCESSING COMPLETED ------------"
-mongoo_status()
