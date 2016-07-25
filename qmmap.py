@@ -277,7 +277,7 @@ def manage(timeout, sleep=120):
     timeout = time (sec) to give a job until it's restarted
     """
     num_not_done = _num_not_at_state('done')
-    print "Managing job's execution; currently {0} done".format(num_done)
+    print "Managing job's execution; currently {0} remaining".format(num_not_done)
     sys.stdout.flush()
     # Keep going until none are state=working or done
     while _num_at_state('open') > 0 or _num_at_state('working') > 0:
