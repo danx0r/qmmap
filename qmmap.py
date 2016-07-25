@@ -125,7 +125,15 @@ def do_chunks(init, proc, src_col, dest_col, query, key, verbose):
 #         if verbose & 2: print "sleep..."
         sys.stdout.flush()
         time.sleep(0.1)
-#
+
+
+def _num_not_at_state(state):
+    """Helper for consisely counting the number of housekeeping objects at a
+given state
+    """
+    return housekeep.objects(state__ne=state).count()
+
+
 # balance chunk size vs async efficiency etc
 # min 10 obj per chunk
 # max 600 obj per chunk
@@ -197,7 +205,8 @@ def mmap(   cb,
                         print "Launching subprocess %s" % j
                     threading.Thread(target=do_chunks, args=args).start()
             if wait_done:
-                wait(timeout, verbose & 2)
+                manage(timeout)
+                #wait(timeout, verbose & 2)
     return dbd[dest_col]
 
 def toMongoEngine(pmobj, metype):
@@ -236,3 +245,63 @@ def wait(timeout=120, verbose=True):
         time.sleep(1)
         rr = r
         r = remaining()
+
+
+def _print_progress():
+    q = housekeep.objects(state = 'done').only('time')
+    tot = housekeep.objects.count()
+    done = q.count()
+    if done > 0:
+        pdone = 100. * done / tot
+        q = q.order_by('time')
+        first = q[0].time
+        q = q.order_by('-time')
+        last = q[0].time
+        if first and last:  # guard against lacking values
+            tdone = float((last-first).seconds)
+            ttot = tdone*tot / done
+            trem = ttot - tdone
+            print "%s still waiting: %d out of %d complete (%.3f%%). %.3f seconds complete, %.3f remaining (%.5f hours)" \
+            % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot, pdone, tdone, trem, trem / 3600.0)
+        else:
+            print "No progress data yet"
+    else:
+        print "%s still waiting; nothing done so far" % (datetime.datetime.now(),)
+sys.stdout.flush()
+
+
+def manage(timeout, sleep=120):
+    """Give periodic status, reopen dead jobs, return success when over;
+    combination of wait, status, clean, and the reprocessing functions.
+    sleep = time (sec) between status updates
+    timeout = time (sec) to give a job until it's restarted
+    """
+    num_not_done = _num_not_at_state('done')
+    print "Managing job's execution; currently {0} done".format(num_done)
+    sys.stdout.flush()
+    # Keep going until none are state=working or done
+    while _num_at_state('open') > 0 or _num_at_state('working') > 0:
+        # Sleep before management step
+        time.sleep(sleep)
+        _print_progress()
+        # Now, iterate over state=working jobs, restart ones that have gone
+        # on longer than the timeout param
+        tnow = datetime.datetime.now()  # get time once instead of repeating
+        # Iterate through working objects to see if it's too long
+        hkwquery = [h for h in housekeep.objects(state='working').only('tstart', 'start').all()]
+        for hkw in hkwquery:
+            # .tstart must have time value for state to equal 'working' at all
+            # See mongoo_process
+            time_taken = (tnow-hkw.tstart).total_seconds()
+            print u"Chunk starting at {0} has been working for {1} sec".format(
+                hkw.start, time_taken)
+            sys.stdout.flush()
+            if time_taken > timeout:
+                print (u"More than {0} sec spent on chunk {1} ;" +
+                    u" setting status back to open").format(
+                    timeout, hkw.start)
+                sys.stdout.flush()
+                hkw.state = "open"
+                hkw.save()
+    print "----------- PROCESSING COMPLETED ------------"
+mongoo_status()
