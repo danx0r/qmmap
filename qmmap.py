@@ -190,7 +190,7 @@ def mmap(   cb,
     else:
         _connect(dbs[source_col], dest)
         if manage_only:
-            manage(timeout):
+            manage(timeout)
         elif not process_only:
             chunk_size = _calc_chunksize(dbs[source_col].count(), multi)
             if verbose & 2: print "chunk size:", chunk_size
