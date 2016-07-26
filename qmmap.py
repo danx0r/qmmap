@@ -177,6 +177,7 @@ def mmap(   cb,
             wait_done=True,
             init_only=False,
             process_only=False,
+            manage_only=False,
             timeout=120):
 
     dbs = pymongo.MongoClient(source_uri).get_default_database()
@@ -188,11 +189,13 @@ def mmap(   cb,
         _process(init, cb, source, dest, verbose)
     else:
         _connect(dbs[source_col], dest)
-        if not process_only:
+        if manage_only:
+            manage(timeout):
+        elif not process_only:
             chunk_size = _calc_chunksize(dbs[source_col].count(), multi)
             if verbose & 2: print "chunk size:", chunk_size
             _init(dbs[source_col], dest, key, query, chunk_size, verbose)
-        if not init_only:
+        elif not init_only:
             args = (init, cb, dbs[source_col], dest, query, key, verbose)
             if verbose & 2:
                 print "Chunking with arguments %s" % (args,)
@@ -200,10 +203,13 @@ def mmap(   cb,
                 print >> sys.stderr, ("WARNING -- can't generate module name. Multiprocessing will be emulated...")
                 do_chunks(*args)
             else:
-                for j in xrange(multi):
-                    if verbose & 2:
-                        print "Launching subprocess %s" % j
-                    threading.Thread(target=do_chunks, args=args).start()
+                if multi > 1:
+                    for j in xrange(multi):
+                        if verbose & 2:
+                            print "Launching subprocess %s" % j
+                        threading.Thread(target=do_chunks, args=args).start()
+                else:
+                    do_chunks(*args)
             if wait_done:
                 manage(timeout)
                 #wait(timeout, verbose & 2)
