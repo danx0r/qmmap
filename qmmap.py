@@ -15,11 +15,14 @@ def is_shell():
 class housekeep(meng.Document):
     start = meng.DynamicField(primary_key = True)
     end = meng.DynamicField()
-    total = meng.IntField()                             # total # of entries to do
-    good = meng.IntField(default = 0)                   # entries successfully processed
+    total = meng.IntField()  # total # of entries to do
+    good = meng.IntField(default = 0)  # entries successfully processed
 #     bad = meng.IntField(default = 0)                    # entries we failed to process to completion
 #     log = meng.ListField()                              # log of misery -- each item a failed processing incident
     state = meng.StringField(default = 'open')
+    # Globally unique identifier for the process, if any, that is working on
+    # this chunk, to know if something else is working on it
+    procname = meng.StringField(default = 'none')
 #     git = meng.StringField()                                 # git commit of this version of source_destination
     tstart = meng.DateTimeField()  # Time when job started
     time = meng.DateTimeField()  # Time when job finished
@@ -64,7 +67,11 @@ def _init(srccol, destcol, key, query, chunk_size, verbose):
         q = srccol.find(qq, [key]).sort([(key, pymongo.ASCENDING)])
         tot = q.limit(chunk_size).count()                    #limit count to chunk for speed
 
-def _process(init, proc, src, dest, verbose):
+def _process(init, proc, src, dest, verbose, hkstart=None):
+    """Run process `proc` on cursor `src`.
+    @hkstart: primary key of houskeeping chunk that this is processing, if you are
+using one and which to avoid collisions
+    """
     if not verbose & 1:
         oldstdout = sys.stdout
         sys.stdout = NULL
@@ -78,6 +85,20 @@ def _process(init, proc, src, dest, verbose):
             return 0
     good = 0
     for doc in src:
+        # On each iteration, check if some other process has taken over; in that
+        # case, exit early with -1
+        if hkstart:  # don't check on jobs that don't use housekeeping
+            chunk = housekeep.objects.get(start=hkstart)
+            # If it's been reset to open, or being worked on by another node, exit
+            if chunk.state == "open":
+                print "Chunk {0} had been reset to open, moving on".format(hkstart)
+                sys.stdout.flush()
+                return -1
+            if chunk.state == "working" and chunk.procname != _procname():
+                print "Chunk {0} was taken over by {1}, moving on".format(
+                    hkstart, chunk.procname)
+                sys.stdout.flush()
+                return -1
         try:
             ret = proc(doc)
             if ret != None:
@@ -100,13 +121,15 @@ def do_chunks(init, proc, src_col, dest_col, query, key, verbose):
                 '$set': {
                     'state': 'working',
                     'tstart': tnow,
+                    'procname': _procname(),
                 }
             }
         )
-        #if raw==None, someone scooped us
+        # if raw==None, someone scooped us
         if raw != None:
+            raw_id = raw['_id']
             #reload as mongoengine object -- _id is .start (because set as primary_key)
-            hko = housekeep.objects(start = raw['_id'])[0]
+            hko = housekeep.objects(start = raw_id)[0]
             # Record git commit for sanity
 #             hko.git = git.Git('.').rev_parse('HEAD')
 #             hko.save()
@@ -123,14 +146,24 @@ def do_chunks(init, proc, src_col, dest_col, query, key, verbose):
             sys.stdout.flush()
             # This is where processing happens
             hko.good =_process(init, proc, cursor, dest_col, verbose)
-            hko.state = 'done'
-            hko.time = datetime.datetime.utcnow()
-            hko.save()
-#         else:
-#             if verbose & 2: print "race lost -- skipping"
-#         if verbose & 2: print "sleep..."
-        sys.stdout.flush()
-        time.sleep(0.1)
+            # Check if another job finished it while this one was plugging away
+            hko_later = housekeep.objects(start = raw_id).only('state')[0]
+            if hko.good == -1:  # Early exit signal
+                print "Chunk at %s lost to another process; not updating" % raw_id
+                sys.stdout.flush()
+            elif hko_later.state == 'done':
+                print "Chunk at %s had already finished; not updating" % raw_id
+                sys.stdout.flush()
+            else:
+                hko.state = 'done'
+                hko.procname = 'none'
+                hko.time = datetime.datetime.utcnow()
+                hko.save()
+         else:
+             # Not all done, but none were open for processing; thus, wait to
+             # see if one re-opens
+             print 'Standing buy for reopening of "working" job...'
+             time.sleep(60)
 
 
 def _num_not_at_state(state):
@@ -159,6 +192,14 @@ def _calc_chunksize(count, multi):
 #     if verbose & 2: print "chunk count:", count / float(cs)
 #     if verbose & 2: print "per proc:", count / float(cs * multi)
     return int(cs)
+
+
+def _procname():
+    """Utility for getting a globally-unique process name, which needs to combine
+hostname and process id
+@returns: string with format "<fully qualified hostname>:<process id>"."""
+    return "{0}:{1}".format(socket.getfqdn(), os.getpid())
+
 
 # cs = _calc_chunksize(11, 3)
 # cs = _calc_chunksize(20, 1)
@@ -189,7 +230,7 @@ def mmap(   cb,
     dbs = pymongo.MongoClient(source_uri).get_default_database()
     dbd = pymongo.MongoClient(dest_uri).get_default_database()
     dest = dbd[dest_col]
-    if multi == None:           #don't use housekeeping, run straight process
+    if multi == None:  # don't use housekeeping, run straight process
 
         source = dbs[source_col].find(query)
         _process(init, cb, source, dest, verbose)
@@ -250,7 +291,7 @@ def wait(timeout=120, verbose=True):
             if verbose: print >> sys.stderr, "TIMEOUT reached - resetting working chunks to open"
             q = housekeep.objects(state = "working")
             if q:
-                q.update(state = "open")
+                q.update(state="open", procname='none')
         if r != rr:
             t = time.time()
         if verbose: print r, "chunks remaning to be processed; %f seconds left until timeout" % (timeout - (time.time() - t)) 
@@ -303,9 +344,9 @@ def manage(timeout, sleep=120):
         hkwquery = [h for h in housekeep.objects(state='working').only('tstart', 'start').all()]
         for hkw in hkwquery:
             # .tstart must have time value for state to equal 'working' at all
-            time_taken = (tnow-hkw.tstart).total_seconds()
-            print u"Chunk starting at {0} has been working for {1} sec".format(
-                hkw.start, time_taken)
+            time_taken = (tnow - hkw.tstart).total_seconds()
+            print (u"Chunk on {0} starting at {1} has been working for {2} " +
+                u"sec").format(_procname, hkw.start, time_taken)
             sys.stdout.flush()
             if time_taken > timeout:
                 print (u"More than {0} sec spent on chunk {1} ;" +
@@ -313,5 +354,6 @@ def manage(timeout, sleep=120):
                     timeout, hkw.start)
                 sys.stdout.flush()
                 hkw.state = "open"
+                hkw.procname = 'none'
                 hkw.save()
     print "----------- PROCESSING COMPLETED ------------"
