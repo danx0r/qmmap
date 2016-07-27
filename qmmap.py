@@ -344,7 +344,7 @@ def manage(timeout, sleep=120):
         # on longer than the timeout param
         tnow = datetime.datetime.now()  # get time once instead of repeating
         # Iterate through working objects to see if it's too long
-        hkwquery = [h for h in housekeep.objects(state='working').only('tstart', 'start').all()]
+        hkwquery = [h for h in housekeep.objects(state='working').all()]
         for hkw in hkwquery:
             # .tstart must have time value for state to equal 'working' at all
             time_taken = (tnow - hkw.tstart).total_seconds()
