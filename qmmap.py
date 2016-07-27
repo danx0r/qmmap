@@ -112,7 +112,13 @@ def do_chunks(init, proc, src_col, dest_col, query, key, verbose):
 #             hko.save()
             # get data pointed to by housekeep
             qq = {'$and': [query, {key: {'$gte': hko.start}}, {key: {'$lte': hko.end}}]}
-            cursor = src_col.find(qq)
+            # Make cursor not timeout, using version-appropriate paramater
+            if pymongo.version_tuple[0] == 2:
+                cursor = src_col.find(qq, timeout=False)
+            elif pymongo.version_tuple[0] == 3:
+                cursor = src_col.find(qq, no_cursor_timeout=True)
+            else:
+                raise Exception("Unknown pymongo version")
             if verbose & 2: print "mongo_process: %d elements in chunk %s-%s" % (cursor.count(), hko.start, hko.end)
             sys.stdout.flush()
             # This is where processing happens
