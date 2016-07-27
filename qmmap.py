@@ -164,7 +164,7 @@ def do_chunks(init, proc, src_col, dest_col, query, key, verbose):
         else:
             # Not all done, but none were open for processing; thus, wait to
             # see if one re-opens
-            print 'Standing buy for reopening of "working" job...'
+            print 'Standing by for reopening of "working" job...'
             time.sleep(60)
 
 
@@ -348,7 +348,7 @@ def manage(timeout, sleep=120):
             # .tstart must have time value for state to equal 'working' at all
             time_taken = (tnow - hkw.tstart).total_seconds()
             print (u"Chunk on {0} starting at {1} has been working for {2} " +
-                u"sec").format(_procname, hkw.start, time_taken)
+                u"sec").format(_procname(), hkw.start, time_taken)
             sys.stdout.flush()
             if time_taken > timeout:
                 print (u"More than {0} sec spent on chunk {1} ;" +
