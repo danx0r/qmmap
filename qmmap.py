@@ -103,6 +103,7 @@ using one and which to avoid collisions
                 return -1
         try:
             ret = proc(doc)
+            sys.stdout.flush()
             if ret != None:
                 dest.save(ret)
             good += 1
