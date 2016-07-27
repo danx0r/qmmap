@@ -2,6 +2,8 @@
 # mongo Operations
 #
 import sys, os, importlib, datetime, time, traceback, __main__
+import socket
+
 import pymongo
 import threading
 import mongoengine as meng
@@ -159,11 +161,11 @@ def do_chunks(init, proc, src_col, dest_col, query, key, verbose):
                 hko.procname = 'none'
                 hko.time = datetime.datetime.utcnow()
                 hko.save()
-         else:
-             # Not all done, but none were open for processing; thus, wait to
-             # see if one re-opens
-             print 'Standing buy for reopening of "working" job...'
-             time.sleep(60)
+        else:
+            # Not all done, but none were open for processing; thus, wait to
+            # see if one re-opens
+            print 'Standing buy for reopening of "working" job...'
+            time.sleep(60)
 
 
 def _num_not_at_state(state):
