@@ -349,7 +349,7 @@ def manage(timeout, sleep=120):
             # .tstart must have time value for state to equal 'working' at all
             time_taken = (tnow - hkw.tstart).total_seconds()
             print (u"Chunk on {0} starting at {1} has been working for {2} " +
-                u"sec").format(_procname(), hkw.start, time_taken)
+                u"sec").format(hkw.procname, hkw.start, time_taken)
             sys.stdout.flush()
             if time_taken > timeout:
                 print (u"More than {0} sec spent on chunk {1} ;" +
