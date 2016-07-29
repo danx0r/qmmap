@@ -88,6 +88,8 @@ using one and which to avoid collisions
             print >> sys.stderr, "***END EXCEPTION***"
             return 0
     good = 0
+    inserts = 0
+    bulk = dest.initialize_unordered_bulk_op()
     for doc in src:
         # On each iteration, check if some other process has taken over; in that
         # case, exit early with -1
@@ -107,12 +109,22 @@ using one and which to avoid collisions
             ret = proc(doc)
             sys.stdout.flush()
             if ret != None:
-                dest.save(ret)
+                # dest.save(ret)
+                # Accumulate in bulk operation
+                bulk.find(ret).upsert().update({'$set': ret})
+                inserts += 1
             good += 1
         except:
             print >> sys.stderr, "***EXCEPTION (process)***"
             print >> sys.stderr, traceback.format_exc()
             print >> sys.stderr, "***END EXCEPTION***"
+    print >> sys.stderr, "Doing bulk insert of {0} items".format(inserts)
+    try:
+        bulk.execute()
+    except:
+        print >> sys.stderr, "***EXCEPTION (process)***"
+        print >> sys.stderr, traceback.format_exc()
+        print >> sys.stderr, "***END EXCEPTION***"
     if not verbose & 1:
         sys.stdout = oldstdout
     return good
