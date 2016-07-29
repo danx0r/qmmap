@@ -49,7 +49,7 @@ def _init(srccol, destcol, key, query, chunk_size, verbose):
 # #         if verbose & 2: print "added %d entries to %s" % (q.count(), housekeep._get_collection_name())
 # #         sys.stdout.flush()
     i = 0
-    tot = q.limit(chunk_size).count()
+    tot = q.limit(chunk_size).count(with_limit_and_skip=True)
     while tot > 0:
         if verbose & 2: print "housekeeping: %d" % i
         i +=1
