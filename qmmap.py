@@ -30,8 +30,8 @@ class housekeep(meng.Document):
     time = meng.DateTimeField()  # Time when job finished
     meta = {'indexes': ['state', 'time']}
 
-def _connect(srccol, destcol):
-    connectMongoEngine(destcol)
+def _connect(srccol, destcol, dest_uri=None):
+    connectMongoEngine(destcol, dest_uri)
     hk_colname = srccol.name + '_' + destcol.name
     switch_collection(housekeep, hk_colname).__enter__()
 
@@ -238,7 +238,7 @@ def mmap(   cb,
         source = dbs[source_col].find(query)
         _process(init, cb, source, dest, verbose)
     else:
-        _connect(dbs[source_col], dest)
+        _connect(dbs[source_col], dest, dest_uri)
         if manage_only:
             manage(timeout)
         elif not process_only:
@@ -270,7 +270,7 @@ def toMongoEngine(pmobj, metype):
     meobj.validate()
     return meobj
 
-def connectMongoEngine(pmcol):
+def connectMongoEngine(pmcol, conn_uri=None):
     if pymongo.version_tuple[0] == 2:     #really? REALLY?
         #host = pmcol.database.connection.HOST
         #port = pmcol.database.connection.PORT
@@ -279,6 +279,9 @@ def connectMongoEngine(pmcol):
     else:
         host = pmcol.database.client.HOST
         port = pmcol.database.client.PORT
+    # Can just use the connection uri, which has credentials
+    if conn_uri:
+        return meng.connect(pmcol.database.name, host=conn_uri)
     return meng.connect(pmcol.database.name, host=host, port=port)
 
 def remaining():
