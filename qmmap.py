@@ -5,6 +5,7 @@ import sys, os, importlib, datetime, time, traceback, __main__
 import socket
 
 import pymongo
+from pymongo.read_preferences import ReadPreference
 import threading
 import mongoengine as meng
 from mongoengine.context_managers import switch_collection
@@ -230,7 +231,9 @@ def mmap(   cb,
             manage_only=False,
             timeout=120):
 
-    dbs = pymongo.MongoClient(source_uri).get_default_database()
+    dbs = pymongo.MongoClient(
+        source_uri, read_preference=ReadPreference.SECONDARY_PREFERRED,
+    ).get_default_database()
     dbd = pymongo.MongoClient(dest_uri).get_default_database()
     dest = dbd[dest_col]
     if multi == None:  # don't use housekeeping, run straight process
