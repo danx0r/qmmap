@@ -71,6 +71,32 @@ def _init(srccol, destcol, key, query, chunk_size, verbose):
         #limit count to chunk for speed
         tot = q.limit(chunk_size).count(with_limit_and_skip=True)
 
+
+def _is_okay_to_work_on(hkstart):
+    """Returns whether a chunk, identified by its housekeeping start value, is okay
+to work on, i.e. whether its status is "working" and this process is assigned to it
+    """
+    if not hkstart:  # Can ignore if specific chunk not specified
+        return True
+    chunk = housekeep.objects.get(start=hkstart)
+    # If it's been reset to open, or being worked on by another node, no good
+    state = chunk.state
+    if state == "done":
+        print "Chunk {0} is already finished".format(hkstart)
+        sys.stdout.flush()
+        return False
+    if state == "open":
+        print "Chunk {0} had been reset to open".format(hkstart)
+        sys.stdout.flush()
+        return False
+    if state == "working" and chunk.procname != _procname():
+        print "Chunk {0} was taken over by {1}, moving on".format(
+            hkstart, chunk.procname)
+        sys.stdout.flush()
+        return False
+    return True
+
+
 def _process(init, proc, src, dest, verbose, hkstart=None):
     """Run process `proc` on cursor `src`.
     @hkstart: primary key of houskeeping chunk that this is processing, if you are
@@ -88,27 +114,37 @@ using one and which to avoid collisions
             print >> sys.stderr, "***END EXCEPTION***"
             return 0
     good = 0
+    inserts = 0
+    # Before starting, check if some other process has taken over; in that
+    # case, exit early with -1
+    if not _is_okay_to_work_on(hkstart):
+        return -1
+    bulk = dest.initialize_unordered_bulk_op()
     for doc in src:
-        # On each iteration, check if some other process has taken over; in that
-        # case, exit early with -1
-        if hkstart:  # don't check on jobs that don't use housekeeping
-            chunk = housekeep.objects.get(start=hkstart)
-            # If it's been reset to open, or being worked on by another node, exit
-            if chunk.state == "open":
-                print "Chunk {0} had been reset to open, moving on".format(hkstart)
-                sys.stdout.flush()
-                return -1
-            if chunk.state == "working" and chunk.procname != _procname():
-                print "Chunk {0} was taken over by {1}, moving on".format(
-                    hkstart, chunk.procname)
-                sys.stdout.flush()
-                return -1
         try:
             ret = proc(doc)
-            sys.stdout.flush()
             if ret != None:
-                dest.save(ret)
+                # If doing housekeeping, save for bulk insert since that will know
+                # whether these would be duplicate inserts
+                if hkstart:
+                    bulk.insert(ret)
+                else:
+                    # No housekeeping checks, so save immediately with DB check
+                    dest.find_and_modify(ret, ret, upsert=True)
+                inserts += 1
             good += 1
+        except:
+            print >> sys.stderr, "***EXCEPTION (process)***"
+            print >> sys.stderr, traceback.format_exc()
+            print >> sys.stderr, "***END EXCEPTION***"
+    # After processing, check again if okay to insert
+    sys.stdout.flush()
+    if not _is_okay_to_work_on(hkstart):
+        return -1
+    print >> sys.stderr, "Doing bulk insert of {0} items".format(inserts)
+    if hkstart:  # Do bulk insert only if doing housekeeping
+        try:
+            bulk.execute()
         except:
             print >> sys.stderr, "***EXCEPTION (process)***"
             print >> sys.stderr, traceback.format_exc()
@@ -150,7 +186,8 @@ def do_chunks(init, proc, src_col, dest_col, query, key, verbose):
             if verbose & 2: print "mongo_process: %d elements in chunk %s-%s" % (cursor.count(), hko.start, hko.end)
             sys.stdout.flush()
             # This is where processing happens
-            hko.good =_process(init, proc, cursor, dest_col, verbose)
+            hko.good =_process(init, proc, cursor, dest_col, verbose,
+                hkstart=raw_id)
             # Check if another job finished it while this one was plugging away
             hko_later = housekeep.objects(start = raw_id).only('state')[0]
             if hko.good == -1:  # Early exit signal
