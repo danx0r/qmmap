@@ -123,7 +123,6 @@ using one and which to avoid collisions
     for doc in src:
         try:
             ret = proc(doc)
-            sys.stdout.flush()
             if ret != None:
                 # If doing housekeeping, save for bulk insert since that will know
                 # whether these would be duplicate inserts
@@ -139,6 +138,7 @@ using one and which to avoid collisions
             print >> sys.stderr, traceback.format_exc()
             print >> sys.stderr, "***END EXCEPTION***"
     # After processing, check again if okay to insert
+    sys.stdout.flush()
     if not _is_okay_to_work_on(hkstart):
         return -1
     print >> sys.stderr, "Doing bulk insert of {0} items".format(inserts)
