@@ -185,7 +185,8 @@ def do_chunks(init, proc, src_col, dest_col, query, key, verbose):
             if verbose & 2: print "mongo_process: %d elements in chunk %s-%s" % (cursor.count(), hko.start, hko.end)
             sys.stdout.flush()
             # This is where processing happens
-            hko.good =_process(init, proc, cursor, dest_col, verbose)
+            hko.good =_process(init, proc, cursor, dest_col, verbose,
+                hkstart=raw_id)
             # Check if another job finished it while this one was plugging away
             hko_later = housekeep.objects(start = raw_id).only('state')[0]
             if hko.good == -1:  # Early exit signal
