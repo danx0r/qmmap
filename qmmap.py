@@ -125,9 +125,13 @@ using one and which to avoid collisions
             ret = proc(doc)
             sys.stdout.flush()
             if ret != None:
-                # dest.save(ret)
-                # Accumulate in bulk operation
-                bulk.find(ret).upsert().update({'$set': ret})
+                # If doing housekeeping, save for bulk insert since that will know
+                # whether these would be duplicate inserts
+                if hkstart:
+                    bulk.insert(ret)
+                else:
+                    # No housekeeping checks, so save immediately with DB check
+                    dest.find_and_modify(ret, ret, upsert=True)
                 inserts += 1
             good += 1
         except:
