@@ -10,6 +10,7 @@ import threading
 import mongoengine as meng
 from mongoengine.context_managers import switch_collection
 
+MAX_CHUNK_SIZE = 600  # Overall limit
 NULL = open(os.devnull, "w")
 
 def is_shell():
@@ -120,6 +121,7 @@ using one and which to avoid collisions
     if not _is_okay_to_work_on(hkstart):
         return -1
     bulk = dest.initialize_unordered_bulk_op()
+    src.batch_size(MAX_CHUNK_SIZE)
     for doc in src:
         try:
             ret = proc(doc)
@@ -217,14 +219,14 @@ given state
 
 # balance chunk size vs async efficiency etc
 # min 10 obj per chunk
-# max 600 obj per chunk
+# max MAX_CHUNK_SIZE obj per chunk
 # otherwise try for at least 10 chunks per proc
 #
 def _calc_chunksize(count, multi):
     cs = count/(multi*10.0)
 #     if verbose & 2: print "\ninitial size:", cs
     cs = max(cs, 10)
-    cs = min(cs, 600)
+    cs = min(cs, MAX_CHUNK_SIZE)
     if count / float(cs * multi) < 1.0:
         cs *= count / float(cs * multi)
         cs = max(1, int(cs))
