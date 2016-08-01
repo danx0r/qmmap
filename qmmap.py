@@ -40,7 +40,7 @@ def _connect(srccol, destcol, dest_uri=None):
 def _init(srccol, destcol, key, query, chunk_size, verbose):
     housekeep.drop_collection()
     hk_objs = []  # unsaved housekeep objs with 
-    hkmakeq = srccol.find(query, fields=[key], sort=pymongo.ASCENDING)
+    hkmakeq = srccol.find(query, fields=[key], sort=[(key, pymongo.ASCENDING)])
     vals = [doc for doc in hkmakeq]
     num_docs = len(vals)
     if verbose:
