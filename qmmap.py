@@ -39,38 +39,46 @@ def _connect(srccol, destcol, dest_uri=None):
 
 def _init(srccol, destcol, key, query, chunk_size, verbose):
     housekeep.drop_collection()
-    q = srccol.find(query, [key]).sort([(key, pymongo.ASCENDING)])
-    if verbose & 2: print "initializing %d entries, housekeeping for %s" % (q.count(), housekeep._get_collection_name())
-#     else:
-#         raise Exception("no incremental yet")
-# #         last = housekeep.objects().order_by('-start')[0].end
-# #         if verbose & 2: print "last partition field in housekeep:", last
-# #         query[key + "__gt"] = last
-# #         q = srccol.objects(**query).only(key).order_by(key)
-# #         if verbose & 2: print "added %d entries to %s" % (q.count(), housekeep._get_collection_name())
-# #         sys.stdout.flush()
-    i = 0
-    tot = q.limit(chunk_size).count(with_limit_and_skip=True)
-    while tot > 0:
-        if verbose & 2: print "housekeeping: %d" % i
-        i +=1
-        sys.stdout.flush()
+    hk_objs = []  # unsaved housekeep objs with 
+    hkmakeq = srccol.find(query, fields=[key], sort=pymongo.ASCENDING)
+    vals = [doc for doc in hkmakeq]
+    num_docs = len(vals)
+    if verbose:
+        print ("Housekeeping: Found {0} source objects under query {1}; ordering " +
+               "by the key {2}").format(num_docs, query, key)
+    index = 0
+    final_index = num_docs - 1
+    if verbose:
+        print "Now defining housekeeping objects with the following stats:"
+        print "total in chunk : start key : end key"
+    while index < num_docs:
         hk = housekeep()
-        hk.start = q[0][key]
-        hk.end =  q[min(chunk_size-1, tot-1)][key]
-        if (hk.start == None or hk.end == None):
-            if verbose & 2: print >> sys.stderr, "ERROR: key field has None. start: %s end: %s" % (hk.start, hk.end)
-            raise Exception("key error")
-        #calc total for this segment
-        qq = {'$and': [query, {key: {'$gte': hk.start}}, {key: {'$lte': hk.end}}]}
-        hk.total = srccol.find(qq, [key]).count()
-        hk.save()
-
-        #get start of next segment
-        qq = {'$and': [query, {key: {'$gt': hk.end}}]}
-        q = srccol.find(qq, [key]).sort([(key, pymongo.ASCENDING)])
-        #limit count to chunk for speed
-        tot = q.limit(chunk_size).count(with_limit_and_skip=True)
+        hk.start = vals[index][key]
+        # Min possible end index
+        min_end_index = index + chunk_size - 1
+        end_index = min(final_end_index, min_end_index)
+        hk.end = vals[end_index][key]
+        # Search ahead for first item that's different, or out of bounds
+        # move end_index to that
+        cur_val = hk.end
+        while end_index < num_docs and cur_val == hk.end:
+            cur_val = vals[end_index][key]
+            end_index += 1
+        # end index will be one past the last item of this chunk, so subtract:
+        # no  yes  yes  yes  yes  no
+        # 3   4    5    6    7    8
+        #     index               end_index
+        hk.total = end_index - index
+        hk_objs.append(hk)
+        if verbose:
+            print "{0} : {1} : {2}".format(hk_obj.total, hk_obj.start, hk_obj.end)
+        index = end_index
+    print "Inserting {0} housekeeping objects into destination db".format(
+        len(hk_objs))
+    sys.stdout.flush()
+    housekeep.objects.insert(hk_objs)
+    print "Initialization successful"
+    sys.stdout.flush()
 
 
 def _is_okay_to_work_on(hkstart):
