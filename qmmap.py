@@ -308,7 +308,8 @@ def mmap(   cb,
             chunk_size = _calc_chunksize(dbs[source_col].count(), multi)
             if verbose & 2: print "chunk size:", chunk_size
             _init(dbs[source_col], dest, key, query, chunk_size, verbose)
-        elif not init_only:
+        # Now process code, if one of the other "only_" options isn't turned on
+        if not manage_only and not init_only:
             args = (init, cb, dbs[source_col], dest, query, key, verbose)
             if verbose & 2:
                 print "Chunking with arguments %s" % (args,)
