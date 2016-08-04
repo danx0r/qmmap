@@ -91,15 +91,15 @@ to work on, i.e. whether its status is "working" and this process is assigned to
     # If it's been reset to open, or being worked on by another node, no good
     state = chunk.state
     if state == "done":
-        print "Chunk {0} is already finished".format(hkstart)
+        print u"Chunk {0} is already finished".format(hkstart)
         sys.stdout.flush()
         return False
     if state == "open":
-        print "Chunk {0} had been reset to open".format(hkstart)
+        print u"Chunk {0} had been reset to open".format(hkstart)
         sys.stdout.flush()
         return False
     if state == "working" and chunk.procname != _procname():
-        print "Chunk {0} was taken over by {1}, moving on".format(
+        print u"Chunk {0} was taken over by {1}, moving on".format(
             hkstart, chunk.procname)
         sys.stdout.flush()
         return False
