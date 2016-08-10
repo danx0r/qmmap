@@ -10,7 +10,7 @@ import threading
 import mongoengine as meng
 from mongoengine.context_managers import switch_collection
 
-MAX_CHUNK_SIZE = 600  # Overall limit
+MAX_CHUNK_SIZE = 60  # Overall limit
 NULL = open(os.devnull, "w")
 
 def is_shell():
