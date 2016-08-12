@@ -136,10 +136,10 @@ using one and which to avoid collisions
         return -1
     bulk = dest.initialize_unordered_bulk_op()
     src.batch_size(MAX_CHUNK_SIZE)
-    tpregetnext = datetime.now()
-    tpostgetnext = datetime.now()
+    tpregetnext = datetime.datetime.now()
+    tpostgetnext = datetime.datetime.now()
     for doc in src:
-        tpostgetnext = datetime.now()
+        tpostgetnext = datetime.datetime.now()
         rep_time("get_next_chunk_elem", tpregetnext, tpostgetnext)
         try:
             ret = proc(doc)
@@ -157,7 +157,7 @@ using one and which to avoid collisions
             print >> sys.stderr, "***EXCEPTION (process)***"
             print >> sys.stderr, traceback.format_exc()
             print >> sys.stderr, "***END EXCEPTION***"
-        tpregetnext = datetime.now()
+        tpregetnext = datetime.datetime.now()
     # After processing, check again if okay to insert
     sys.stdout.flush()
     if not _is_okay_to_work_on(hkstart):
@@ -165,9 +165,9 @@ using one and which to avoid collisions
     print >> sys.stderr, "Doing bulk insert of {0} items".format(inserts)
     if hkstart:  # Do bulk insert only if doing housekeeping
         try:
-            tprebulk = datetime.now()
+            tprebulk = datetime.datetime.now()
             bulk.execute()
-            tpostbulk = datetime.now()
+            tpostbulk = datetime.datetime.now()
             rep_time("bulk_insert", tprebulk, tpostbulk)
         except:
             print >> sys.stderr, "***EXCEPTION (process)***"
@@ -207,9 +207,9 @@ def do_chunks(init, proc, src_col, dest_col, query, key, verbose):
                 cursor = src_col.find(qq, no_cursor_timeout=True)
             else:
                 raise Exception("Unknown pymongo version")
-            tprecount = datetime.now()
+            tprecount = datetime.datetime.now()
             num_elems = cursor.count()
-            tpostcount = datetime.now()
+            tpostcount = datetime.datetime.now()
             rep_time("count_chunk_size", tprecount, tpostcount)
             if verbose & 2: print "mongo_process: %d elements in chunk %s-%s" % (num_elems, hko.start, hko.end)
             sys.stdout.flush()
