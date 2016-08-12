@@ -152,12 +152,13 @@ using one and which to avoid collisions
     if not _is_okay_to_work_on(hkstart):
         return -1
     print >> sys.stderr, "Doing bulk insert of {0} items".format(inserts)
-    try:
-        bulk.execute()
-    except:
-        print >> sys.stderr, "***EXCEPTION (process)***"
-        print >> sys.stderr, traceback.format_exc()
-        print >> sys.stderr, "***END EXCEPTION***"
+    if hkstart:  # Do bulk insert only if doing housekeeping
+        try:
+            bulk.execute()
+        except:
+            print >> sys.stderr, "***EXCEPTION (process)***"
+            print >> sys.stderr, traceback.format_exc()
+            print >> sys.stderr, "***END EXCEPTION***"
     if not verbose & 1:
         sys.stdout = oldstdout
     return good
