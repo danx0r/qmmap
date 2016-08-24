@@ -366,11 +366,11 @@ def _print_progress():
             ttot = tdone*tot / done
             trem = ttot - tdone
             print "%s still waiting: %d out of %d complete (%.3f%%). %.3f seconds complete, %.3f remaining (%.5f hours)" \
-            % (datetime.datetime.now().strftime("%H:%M:%S:%f"), done, tot, pdone, tdone, trem, trem / 3600.0)
+            % (datetime.datetime.utcnow().strftime("%H:%M:%S:%f"), done, tot, pdone, tdone, trem, trem / 3600.0)
         else:
             print "No progress data yet"
     else:
-        print "%s still waiting; nothing done so far" % (datetime.datetime.now(),)
+        print "%s still waiting; nothing done so far" % (datetime.datetime.utcnow(),)
 sys.stdout.flush()
 
 
@@ -390,7 +390,7 @@ def manage(timeout, sleep=120):
         _print_progress()
         # Now, iterate over state=working jobs, restart ones that have gone
         # on longer than the timeout param
-        tnow = datetime.datetime.now()  # get time once instead of repeating
+        tnow = datetime.datetime.utcnow()  # get time once instead of repeating
         # Iterate through working objects to see if it's too long
         hkwquery = [h for h in housekeep.objects(state='working').all()]
         for hkw in hkwquery:
