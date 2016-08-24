@@ -155,7 +155,7 @@ using one and which to avoid collisions
         sys.stdout = oldstdout
     return good
 
-def do_chunks(init, proc, src_col, dest_col, query, key, verbose):
+def do_chunks(init, proc, src_col, dest_col, query, key, verbose, sleep=60):
     while housekeep.objects(state = 'done').count() < housekeep.objects.count():
         tnow = datetime.datetime.utcnow()
         raw = housekeep._collection.find_and_modify(
@@ -207,7 +207,7 @@ def do_chunks(init, proc, src_col, dest_col, query, key, verbose):
             # Not all done, but none were open for processing; thus, wait to
             # see if one re-opens
             print 'Standing by for reopening of "working" job...'
-            time.sleep(60)
+            time.sleep(sleep)
 
 
 def _num_not_at_state(state):
@@ -269,7 +269,8 @@ def mmap(   cb,
             init_only=False,
             process_only=False,
             manage_only=False,
-            timeout=120):
+            timeout=120,
+            sleep=60):
 
     dbs = pymongo.MongoClient(
         source_uri, read_preference=ReadPreference.SECONDARY_PREFERRED,
@@ -283,14 +284,14 @@ def mmap(   cb,
     else:
         _connect(dbs[source_col], dest, dest_uri)
         if manage_only:
-            manage(timeout)
+            manage(timeout, sleep)
         elif not process_only:
             chunk_size = _calc_chunksize(dbs[source_col].count(), multi)
             if verbose & 2: print "chunk size:", chunk_size
             _init(dbs[source_col], dest, key, query, chunk_size, verbose)
         # Now process code, if one of the other "only_" options isn't turned on
         if not manage_only and not init_only:
-            args = (init, cb, dbs[source_col], dest, query, key, verbose)
+            args = (init, cb, dbs[source_col], dest, query, key, verbose, sleep)
             if verbose & 2:
                 print "Chunking with arguments %s" % (args,)
             if is_shell():
@@ -305,7 +306,7 @@ def mmap(   cb,
                 else:
                     do_chunks(*args)
             if wait_done:
-                manage(timeout)
+                manage(timeout, sleep)
                 #wait(timeout, verbose & 2)
     return dbd[dest_col]
 

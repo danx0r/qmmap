@@ -38,10 +38,12 @@ if __name__ == "__main__":
     par.add_argument("processes", type=int, nargs='?', default=1)
     par.add_argument("size", type=int, nargs='?', default=500)
     par.add_argument("num", type=int, nargs='?', default=10000)
-    par.add_argument("--verbose", type=int, default = 1)
+    par.add_argument("--verbose", type=int, default=1)
     par.add_argument("--skipdata", action='store_true')
     par.add_argument("--init_only", action='store_true')
     par.add_argument("--process_only", action='store_true')
+    par.add_argument("--timeout", type=int, default=120)
+    par.add_argument("--sleep", type=int, default=60)
     
     config = par.parse_args()
 
@@ -65,8 +67,10 @@ if __name__ == "__main__":
     
     print "Running mmap..."
     t = time.time()
-    qmmap.mmap(process, "qmmap_src", "qmmap_dest", init=init, multi=config.processes, 
-                verbose=config.verbose, init_only=config.init_only, process_only=config.process_only)
+    qmmap.mmap(process, "qmmap_src", "qmmap_dest", init=init,
+        multi=config.processes, verbose=config.verbose, init_only=config.init_only,
+        process_only=config.process_only, timeout=config.timeout,
+        sleep=config.sleep)
     print "time processing:", time.time() - t, "seconds"
     print "representative output:"
 #     print list(db.qmmap_dest.find())
