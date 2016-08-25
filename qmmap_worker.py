@@ -24,9 +24,8 @@ config = par.parse_args()
 
 query = json.loads(config.query)
 
-#sys.path.insert(0, config.module_abspath)
-module = importlib.import_module(config.module, config.module_abspath)
-print config.module
+sys.path.insert(0, config.module_abspath)
+module = importlib.import_module(config.module)
 cb = getattr(module, config.function)
 init = getattr(module, config.init) if config.init else None
 

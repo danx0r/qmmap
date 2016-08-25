@@ -294,13 +294,14 @@ def mmap(   cb,
             else:
                 if multi > 1:
                     from pipes import quote
-                    process_name = cb.func_name
+                    process_name = cb.__name__ #cb.func_name
                     if init:
                         init_name = "--init={0}".format(quote(init.func_name))
                     else:
                         init_name = ""
                     process_module_str1 = cb.__module__
                     process_module = sys.modules[process_module_str1]
+                    process_module2 = sys.argv[0][:-3]
                     print process_module
                     process_module_str2 = process_module.__package__
                     print process_module_str2
@@ -311,7 +312,7 @@ def mmap(   cb,
                             print "Launching subprocess %s" % j
                         cmd = WORKER_COMMAND.format(
                             quote(module_abspath),
-                            quote(process_module_str2),
+                            quote(process_module2),
                             quote(process_name),
                             quote(source_col),
                             quote(dest_col),
