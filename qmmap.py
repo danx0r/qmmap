@@ -11,7 +11,7 @@ import threading
 import mongoengine as meng
 from mongoengine.context_managers import switch_collection
 
-MAX_CHUNK_SIZE = 60  # Overall limit
+MAX_CHUNK_SIZE = 600  # Overall limit
 NULL = open(os.devnull, "w")
 
 def is_shell():
@@ -207,7 +207,7 @@ def do_chunks(init, proc, src_col, dest_col, query, key, verbose, sleep=60):
         else:
             # Not all done, but none were open for processing; thus, wait to
             # see if one re-opens
-            print 'Standing by for reopening of "working" job...'
+            #print 'Standing by for reopening of "working" job...'
             time.sleep(sleep)
 
 
@@ -243,7 +243,7 @@ def _procname():
     """Utility for getting a globally-unique process name, which needs to combine
 hostname and process id
 @returns: string with format "<fully qualified hostname>:<thread id>"."""
-    return "{0}:{1}".format(socket.getfqdn(), threading.current_thread().ident)
+    return "{0}:{1}".format(socket.getfqdn(), os.getpid())
 
 
 WORKER_COMMAND = "python qmmap_worker.py {0} {1} {2} {3} {4} --src_uri={5} \
