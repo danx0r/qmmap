@@ -207,7 +207,7 @@ def do_chunks(init, proc, src_col, dest_col, query, key, verbose, sleep=60):
         else:
             # Not all done, but none were open for processing; thus, wait to
             # see if one re-opens
-            #print 'Standing by for reopening of "working" job...'
+            print 'Standing by for reopening of "working" job...'
             time.sleep(sleep)
 
 
