@@ -18,13 +18,15 @@ par.add_argument("--init", type=str, default = "")
 par.add_argument("--query", type=str, default = "{}")
 par.add_argument("--key", type=str, default = "_id")
 par.add_argument("--verbose", type=int, default = 0)
+par.add_argument("--sleep", type=int, default=60)
 
 config = par.parse_args()
 
 query = json.loads(config.query)
 
-sys.path.insert(0, config.module_abspath)
-module = importlib.import_module(config.module)
+#sys.path.insert(0, config.module_abspath)
+module = importlib.import_module(config.module, config.module_abspath)
+print config.module
 cb = getattr(module, config.function)
 init = getattr(module, config.init) if config.init else None
 
@@ -39,5 +41,5 @@ hk_colname = source.name + '_' + dest.name
 switch_collection(housekeep, hk_colname).__enter__()
 
 # print "DEBUG start worker", os.getpid()
-do_chunks(init, cb, source, dest, query, config.key, config.verbose)
+do_chunks(init, cb, source, dest, query, config.key, config.verbose, config.sleep)
 # print "DEBUG end worker", os.getpid()

@@ -2,6 +2,7 @@
 # mongo Operations
 #
 import sys, os, importlib, datetime, time, traceback, __main__
+import json
 import socket
 
 import pymongo
@@ -241,19 +242,12 @@ def _calc_chunksize(count, multi):
 def _procname():
     """Utility for getting a globally-unique process name, which needs to combine
 hostname and process id
-@returns: string with format "<fully qualified hostname>:<process id>"."""
-    return "{0}:{1}".format(socket.getfqdn(), os.getpid())
+@returns: string with format "<fully qualified hostname>:<thread id>"."""
+    return "{0}:{1}".format(socket.getfqdn(), threading.current_thread().ident)
 
 
-# cs = _calc_chunksize(11, 3)
-# cs = _calc_chunksize(20, 1)
-# cs = _calc_chunksize(1000, 5)
-# cs = _calc_chunksize(1000, 15)
-# cs = _calc_chunksize(1000, 150)
-# cs = _calc_chunksize(100000, 5)
-# cs = _calc_chunksize(100000, 15)
-# cs = _calc_chunksize(100000, 150)
-# exit()
+WORKER_COMMAND = "python qmmap_worker.py {0} {1} {2} {3} {4} --src_uri={5} \
+--dest_uri={6} {7} --query={8} --key={9} --verbose={10} --sleep={11} &"
 
 def mmap(   cb,
             source_col,
@@ -299,11 +293,43 @@ def mmap(   cb,
                 do_chunks(*args)
             else:
                 if multi > 1:
+                    from pipes import quote
+                    process_name = cb.func_name
+                    if init:
+                        init_name = "--init={0}".format(quote(init.func_name))
+                    else:
+                        init_name = ""
+                    process_module_str1 = cb.__module__
+                    process_module = sys.modules[process_module_str1]
+                    print process_module
+                    process_module_str2 = process_module.__package__
+                    print process_module_str2
+                    module_abspath = os.path.abspath(
+                        os.path.dirname(process_module.__file__))
                     for j in xrange(multi):
                         if verbose & 2:
                             print "Launching subprocess %s" % j
-                        threading.Thread(target=do_chunks, args=args).start()
+                        cmd = WORKER_COMMAND.format(
+                            quote(module_abspath),
+                            quote(process_module_str2),
+                            quote(process_name),
+                            quote(source_col),
+                            quote(dest_col),
+                            quote(source_uri),
+                            quote(dest_uri),
+                            init_name,  # Already quoted
+                            quote(json.dumps(query)),
+                            quote(key),
+                            quote(str(verbose)),
+                            quote(str(sleep)),
+                        )
+                        print cmd
+                        #sys.exit(1)
+                        os.system(cmd)
+                    sys.stdout.flush()
+
                 else:
+                    # Can just run here without spawning off separate process
                     do_chunks(*args)
             if wait_done:
                 manage(timeout, sleep)

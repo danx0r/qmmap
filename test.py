@@ -67,7 +67,7 @@ if __name__ == "__main__":
     
     print "Running mmap..."
     t = time.time()
-    qmmap.mmap(process, "qmmap_src", "qmmap_dest", init=init,
+    qmmap.mmap(burro.halb.process, "qmmap_src", "qmmap_dest", init=init,
         multi=config.processes, verbose=config.verbose, init_only=config.init_only,
         process_only=config.process_only, timeout=config.timeout,
         sleep=config.sleep)
