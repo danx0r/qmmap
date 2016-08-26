@@ -2,7 +2,8 @@
 #
 # qmmap worker invoked as command-line script
 #
-import sys, os, importlib, argparse, json, pymongo
+import importlib
+import sys, os, imp, argparse, json, pymongo
 from qmmap import do_chunks, connectMongoEngine, housekeep
 from mongoengine.context_managers import switch_collection
 
@@ -25,7 +26,7 @@ config = par.parse_args()
 query = json.loads(config.query)
 
 sys.path.insert(0, config.module_abspath)
-module = importlib.import_module(config.module)
+module = importlib.import_module(config.module, config.module_abspath)
 cb = getattr(module, config.function)
 init = getattr(module, config.init) if config.init else None
 
