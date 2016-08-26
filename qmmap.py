@@ -11,8 +11,8 @@ from multiprocessing import Process
 import mongoengine as meng
 from mongoengine.context_managers import switch_collection
 
-MAX_CHUNK_SIZE = 60  # Overall limit
 NULL = open(os.devnull, "w")
+BATCH_SIZE = 600  # Set input batch size; mongo will limit it if it's too much
 
 def is_shell():
     return sys.argv[0] == "" or sys.argv[0][-8:] == "/ipython"
@@ -143,7 +143,7 @@ using one and which to avoid collisions
     if not _is_okay_to_work_on(hkstart):
         return -1
     bulk = dest.initialize_unordered_bulk_op()
-    src.batch_size(MAX_CHUNK_SIZE)
+    src.batch_size(BATCH_SIZE)
     insert_size = 0  # Size, in bytes, of all objects to be written
     insert_count = 0 # Number of inserts
     for doc in src:
@@ -257,23 +257,16 @@ given state
 
 
 # balance chunk size vs async efficiency etc
-# min 10 obj per chunk
-# max MAX_CHUNK_SIZE obj per chunk
 # otherwise try for at least 10 chunks per proc
 #
-def _calc_chunksize(count, multi):
+def _calc_chunksize(count, multi, chunk_size=None):
+    if chunk_size != None:
+        return chunk_size
     cs = count/(multi*10.0)
-#     if verbose & 2: print "\ninitial size:", cs
     cs = max(cs, 10)
-    cs = min(cs, MAX_CHUNK_SIZE)
     if count / float(cs * multi) < 1.0:
         cs *= count / float(cs * multi)
         cs = max(1, int(cs))
-#     if verbose & 2: print "obj count:", count
-#     if verbose & 2: print "multi proc:", multi
-#     if verbose & 2: print "chunk size:", cs
-#     if verbose & 2: print "chunk count:", count / float(cs)
-#     if verbose & 2: print "per proc:", count / float(cs * multi)
     return int(cs)
 
 
@@ -284,16 +277,6 @@ hostname and process id
 @returns: string with format "<fully qualified hostname>:<process id>"."""
     return "{0}:{1}".format(socket.getfqdn(), os.getpid())
 
-
-# cs = _calc_chunksize(11, 3)
-# cs = _calc_chunksize(20, 1)
-# cs = _calc_chunksize(1000, 5)
-# cs = _calc_chunksize(1000, 15)
-# cs = _calc_chunksize(1000, 150)
-# cs = _calc_chunksize(100000, 5)
-# cs = _calc_chunksize(100000, 15)
-# cs = _calc_chunksize(100000, 150)
-# exit()
 
 def mmap(   cb,
             source_col,
@@ -309,6 +292,7 @@ def mmap(   cb,
             init_only=False,
             process_only=False,
             manage_only=False,
+            chunk_size=None,
             timeout=120,
             sleep=60):
 
@@ -336,9 +320,10 @@ def mmap(   cb,
         if manage_only:
             manage(timeout, sleep)
         elif not process_only:
-            chunk_size = _calc_chunksize(dbs[source_col].count(), multi)
+            computed_chunk_size = _calc_chunksize(
+                dbs[source_col].count(), multi, chunk_size)
             if verbose & 2: print "chunk size:", chunk_size
-            _init(dbs[source_col], dest, key, query, chunk_size, verbose)
+            _init(dbs[source_col], dest, key, query, computed_chunk_size, verbose)
         # Now process code, if one of the other "only_" options isn't turned on
         if not manage_only and not init_only:
             args = (init, cb, dbs[source_col], dest, query, key, verbose, sleep)
