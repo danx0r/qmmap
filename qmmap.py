@@ -246,8 +246,8 @@ hostname and process id
     return "{0}:{1}".format(socket.getfqdn(), os.getpid())
 
 
-WORKER_COMMAND = "python qmmap_worker.py {0} {1} {2} {3} {4} --src_uri={5} \
---dest_uri={6} {7} --query={8} --key={9} --verbose={10} --sleep={11} &"
+WORKER_COMMAND = "qmmap_worker.py {0} {1} {2} {3} {4} --src_uri={5} --dest_uri={6} \
+{7} --query={8} --key={9} --verbose={10} --sleep={11} &"
 
 def mmap(   cb,
             source_col,
