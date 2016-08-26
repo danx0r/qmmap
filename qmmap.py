@@ -6,7 +6,7 @@ import socket
 
 import pymongo
 from pymongo.read_preferences import ReadPreference
-import threading
+from multiprocessing import Process
 import mongoengine as meng
 from mongoengine.context_managers import switch_collection
 
@@ -292,10 +292,20 @@ def mmap(   cb,
             timeout=120,
             sleep=60):
 
-    dbs = pymongo.MongoClient(
-        source_uri, read_preference=ReadPreference.SECONDARY_PREFERRED,
-    ).get_default_database()
-    dbd = pymongo.MongoClient(dest_uri).get_default_database()
+    # Two different connect=False idioms; need to set it false to wait on
+    # connecting in case of process being spawned.
+    if pymongo.version_tuple[0] == 2:
+        dbs = pymongo.MongoClient(
+            source_uri, read_preference=ReadPreference.SECONDARY_PREFERRED,
+            _connect=False,
+        ).get_default_database()
+        dbd = pymongo.MongoClient(dest_uri, _connect=False).get_default_database()
+    else:
+        dbs = pymongo.MongoClient(
+            source_uri, read_preference=ReadPreference.SECONDARY_PREFERRED,
+            connect=False,
+        ).get_default_database()
+        dbd = pymongo.MongoClient(dest_uri, connect=False).get_default_database()
     dest = dbd[dest_col]
     if multi == None:  # don't use housekeeping, run straight process
 
@@ -322,7 +332,8 @@ def mmap(   cb,
                     for j in xrange(multi):
                         if verbose & 2:
                             print "Launching subprocess %s" % j
-                        threading.Thread(target=do_chunks, args=args).start()
+                        proc = Process(target=do_chunks, args=args)
+                        proc.start()
                 else:
                     do_chunks(*args)
             if wait_done:
