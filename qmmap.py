@@ -4,6 +4,7 @@
 import sys, os, importlib, datetime, time, traceback, __main__
 import socket
 
+import bson
 import pymongo
 from pymongo.read_preferences import ReadPreference
 from multiprocessing import Process
@@ -133,6 +134,9 @@ using one and which to avoid collisions
             _print_proc("***END EXCEPTION***")
             return 0
     good = 0
+    # After you've accumulated this many bytes of objects, execute the bulk
+    # write and start it over
+    WRITE_THRESHOLD = 10000000
     inserts = 0
     # Before starting, check if some other process has taken over; in that
     # case, exit early with -1
@@ -140,6 +144,8 @@ using one and which to avoid collisions
         return -1
     bulk = dest.initialize_unordered_bulk_op()
     src.batch_size(MAX_CHUNK_SIZE)
+    insert_size = 0  # Size, in bytes, of all objects to be written
+    insert_count = 0 # Number of inserts
     for doc in src:
         try:
             ret = proc(doc)
@@ -148,6 +154,19 @@ using one and which to avoid collisions
                 # whether these would be duplicate inserts
                 if hkstart:
                     bulk.insert(ret)
+                    insert_size += _doc_size(ret)
+                    insert_count += 1
+                    # If past the threshold, do another check and write
+                    if insert_size > WRITE_THRESHOLD:
+                        if not _is_okay_to_work_on(hkstart):
+                            return -1
+                        print u"Writing to chunk {0} : {1} docs totaling " \
+                            u"{2} bytes".format(hkstart, insert_count, insert_size)
+                        sys.stdout.flush()
+                        _write_bulk(bulk)
+                        bulk = dest.initialize_unordered_bulk_op()
+                        insert_size = 0
+                        insert_count = 0
                 else:
                     # No housekeeping checks, so save immediately with DB check
                     dest.find_and_modify(ret, ret, upsert=True)
@@ -226,6 +245,7 @@ def do_chunks(init, proc, src_col, dest_col, query, key, verbose, sleep=60):
             # Not all done, but none were open for processing; thus, wait to
             # see if one re-opens
             print 'Standing by for reopening of "working" job...'
+            sys.stdout.flush()
             time.sleep(sleep)
 
 
