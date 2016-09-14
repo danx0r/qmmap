@@ -282,6 +282,7 @@ def mmap(   cb,
             source_col,
             dest_col,
             init=None, 
+            reset=False,
             source_uri="mongodb://127.0.0.1/test", 
             dest_uri="mongodb://127.0.0.1/test",
             query={},
@@ -323,6 +324,10 @@ def mmap(   cb,
             computed_chunk_size = _calc_chunksize(
                 dbs[source_col].count(), multi, chunk_size)
             if verbose & 2: print "chunk size:", chunk_size
+            if reset:
+                print >> sys.stderr, ("Dropping all records in destination db" +
+                    "/collection {0}/{1}").format(dbd, dest.name)
+                dest.remove({})
             _init(dbs[source_col], dest, key, query, computed_chunk_size, verbose)
         # Now process code, if one of the other "only_" options isn't turned on
         if not manage_only and not init_only:
