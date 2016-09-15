@@ -364,6 +364,28 @@ def toMongoEngine(pmobj, metype):
     meobj.validate()
     return meobj
 
+
+def qmmapify(meng_class):
+    """Decorator for turning a `process` function writeen for mongoengine objects,
+to a process function written for pymongo objects (and therefore compatible with
+QMmap.
+    params:
+    @meng_class: mongoengine class for the type that the mongoengine function
+    expects as an argument
+    """
+    def pymongo_process_fn(meng_process_fn):
+        def wrapper(pymongo_source):
+            input_meng_obj = toMongoEngine(pymongo_source, meng_class)
+            output_meng_obj = meng_process_fn(input_meng_obj)
+            # If it returned an object at all, convert that to pymongo
+            if output_meng_obj:
+                return output_meng_obj.to_mongo()
+            else:
+                return None
+        return wrapper
+    return pymongo_process_fn
+
+
 def connectMongoEngine(pmcol, conn_uri=None):
     if pymongo.version_tuple[0] == 2:     #really? REALLY?
         #host = pmcol.database.connection.HOST
