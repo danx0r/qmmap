@@ -1,10 +1,10 @@
-#qmMap
+#QMmap
 
 ##Distributed MongoDB Map
 
 ###from hiQ Labs (www.hiqlabs.com)
 
-qmMap is a lightweight library that enables asynchronous, parallel processing of MongoDB documents using a simple, map-like interface.
+QMmap is a lightweight library that enables asynchronous, parallel processing of MongoDB documents using a simple, map-like interface.
 
 *The following examples were created in IPython, an excellent tool. Cut and paste these examples into your IPython notebook:*
 
@@ -22,10 +22,11 @@ print map(func, src)
 
     [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
 
-qmMap provides a similar function, ```mmap```, that operates on MongoDB collections:
+QMmap provides a similar function, ```mmap```, that operates on MongoDB collections:
 
 ```Python
-# assumes mongodb running locally, database named 'test'
+# assumes mongodb running locally, database named 'test', function input is a
+# pymongo object
 import pymongo
 from qmmap import mmap
 
@@ -42,7 +43,7 @@ print list(ret.find())
 ```
     [{u'_id': 0}, {u'_id': 10}, {u'_id': 20}, {u'_id': 30}, {u'_id': 40}, {u'_id': 50}, {u'_id': 60}, {u'_id': 70}, {u'_id': 80}, {u'_id': 90}]
 
-qmMap has helper functions to support mongoengine classes:
+QMmap has helper functions to support mongoengine classes:
 
 ```Python
 from mongoengine import Document, IntField, connect
@@ -71,24 +72,56 @@ for o in qmmap_out.objects:
 
     0 10 20 30 40 50 60 70 80 90
 
+Alternatively, if your processing function is written in a way that converts a mongoengine object to another mongoengine object, simply add the `qmmapify` decorator, passing in the input class:
+
+```Python
+import qmmap
+
+class qmmap_in(Document):
+    num1 = IntField()
+    num2 = IntField()
+
+class qmmap_out(Document):
+    val = IntField()
+
+def func(qmmap_in_obj):
+    output = qmmap_out()
+    output.val = qmmap_in_obj.num1 + qmmap_in_obj.num2
+    return output
+
+@qmmap.qmmapify(qmmap_in)
+def qmmap_func(qmmap_in_obj):
+    return func(qmmap_in_obj)
+
+ret = qmmap.mmap(qmmap_func, "qmmap_in", "qmmap_out")
+```
+
+You can then continue to have `func` operate in the "mongoengine" world while passing `qmmap_func` to qmmap.
+
 We can leverage multiple CPU's by specifying the ```multi``` parameter:
 
 ```Python
 ret = mmap(func, "qmmap_in", "qmmap_out", multi=2)
 ```
 
+To invoke from the command line, you must pass four required arguments in this order:
+
 ```
-WARNING -- can't generate module name. Multiprocessing will be emulated...
+  module                Python module containing the function you wish to
+                        apply to the input collection, e.g. foo.bar[...]
+  function              Function within `module` that you wish to apply to
+                        each member of theinput collection
+  source_col            input/source collection, sent to `module`.`function`
+                        for processing
+  dest_col              output/destination collection to write output
+                        documents of `module`.`function` to
 ```
 
-qmMap doesn't (presently) support multiple CPU's from the command line, so we get a warning.
+Other deviations from the default arguments can be specified as indicated in `qmcli.py --help`.  Importantly, you may draw the settings from a JSON file using `--jsonconfig` or a python module with `pyconfig`. Assuming the file above is in `processors/convert.py`, you could invoke it from the command line as:
 
-
-```Python
-print list(ret.find())
+```Bash
+qmcli.py --multi=2 processors.convert qmmap_func qmmap_in qmmap_out
 ```
-
-    [{u'_id': 10}, {u'_id': 20}, {u'_id': 30}, {u'_id': 40}, {u'_id': 50}, {u'_id': 60}, {u'_id': 70}, {u'_id': 80}, {u'_id': 90}, {u'_id': 100}, {u'_id': 0}]
 
 Run ``test.py`` to see multiple CPU's work for real.
 
