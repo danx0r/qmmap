@@ -193,7 +193,7 @@ using one and which to avoid collisions
     sys.stdout.flush()
     return good
 
-def do_chunks(init, proc, src_col, dest_col, query, key, verbose, sleep=60):
+def do_chunks(init, proc, src_col, dest_col, query, key, sort, verbose, sleep=60):
     while housekeep.objects(state = 'done').count() < housekeep.objects.count():
         tnow = datetime.datetime.utcnow()
         raw = housekeep._collection.find_and_modify(
@@ -223,6 +223,11 @@ def do_chunks(init, proc, src_col, dest_col, query, key, verbose, sleep=60):
                 cursor = src_col.find(qq, no_cursor_timeout=True)
             else:
                 raise Exception("Unknown pymongo version")
+            # Set the sort parameters on the cursor
+            if sort[0] == "-":
+                cursor = cursor.sort(sort[1:], pymongo.DESCENDING)
+            else:
+                cursor = cursor.sort(sort, pymongo.ASCENDING)
             if verbose & 2: print "mongo_process: %d elements in chunk %s-%s" % (cursor.count(), hko.start, hko.end)
             sys.stdout.flush()
             # This is where processing happens
@@ -287,6 +292,7 @@ def mmap(   cb,
             dest_uri="mongodb://127.0.0.1/test",
             query={},
             key='_id',
+            sort='_id',
             verbose=1,
             multi=None,
             wait_done=True,
@@ -332,7 +338,8 @@ def mmap(   cb,
             _init(dbs[source_col], dest, key, query, computed_chunk_size, verbose)
         # Now process code, if one of the other "only_" options isn't turned on
         if not manage_only and not init_only:
-            args = (init, cb, dbs[source_col], dest, query, key, verbose, sleep)
+            args = (init, cb, dbs[source_col], dest, query, key, sort, verbose,
+                sleep)
             if verbose & 2:
                 print "Chunking with arguments %s" % (args,)
             if is_shell():
