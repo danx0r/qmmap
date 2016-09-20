@@ -73,6 +73,17 @@ one collection into other by use of a function.
         "parameters; overrides any specified from the command line or via " \
         "--jsonconfig"
     )
+    par.add_argument("--key", type=str, default="_id", help=
+        "Key/field to use for chunking; when setting up chunks, this will ensure" \
+        "that no two input documents with the same value for `key` will be placed" \
+        "in different chunks; default: _id (primary key)"
+    )
+    par.add_argument("--sort", type=str, default="_id", help=
+        "Key/field to sort by *within* each chunk; this ensures that, when a " \
+        "chunk is processed, the items will be processed in ascending order by" \
+        "`sort` key (put a '-' in front to sort descending e.g. '-name'); " \
+        "default: _id"
+    )
     par.add_argument("module", help=
         "Python module containing the function you wish to apply to the input " \
         "collection, e.g. foo.bar[...]"
