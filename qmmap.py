@@ -106,6 +106,17 @@ def _doc_size(doc):
     return len(bson.BSON.encode(doc))
 
 
+def _copy_cursor(cursor):
+    """Returns a new cursor with the same properites that won't affect the original
+    @cursor: any cursor that hasn't already been iterated over
+
+    @return: new cursor with same attributes
+    """
+    new_cursor = cursor.collection.find()
+    new_cursor.__dict__.update(cursor.__dict__)
+    return new_cursor
+
+
 def _write_bulk(bulk):
     """Execute bulk write `bulk` and note the errors
     """
@@ -125,9 +136,12 @@ using one and which to avoid collisions
     if not verbose & 1:
         oldstdout = sys.stdout
         sys.stdout = NULL
+    global context
     if init:
         try:
-            init(src, dest)
+            # Pass a copy of the source and destination cursors so they won't
+            # affect iteration in the rest of _process
+            context = init(_copy_cursor(src), _copy_cursor(dest))
         except:
             _print_proc("***EXCEPTION (process)***")
             _print_proc(traceback.format_exc())
@@ -192,6 +206,10 @@ using one and which to avoid collisions
         sys.stdout = oldstdout
     sys.stdout.flush()
     return good
+
+
+context = {}
+
 
 def do_chunks(init, proc, src_col, dest_col, query, key, sort, verbose, sleep=60):
     while housekeep.objects(state = 'done').count() < housekeep.objects.count():
