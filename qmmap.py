@@ -319,7 +319,8 @@ def mmap(   cb,
             manage_only=False,
             chunk_size=None,
             timeout=120,
-            sleep=60):
+            sleep=60,
+            **kwargs):
 
     # Two different connect=False idioms; need to set it false to wait on
     # connecting in case of process being spawned.
