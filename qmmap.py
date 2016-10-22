@@ -167,7 +167,16 @@ using one and which to avoid collisions
                 # If doing housekeeping, save for bulk insert since that will know
                 # whether these would be duplicate inserts
                 if hkstart:
-                    bulk.insert(ret)
+                    # if _id in ret, search by that and upsert/update_one;
+                    # assume that all non-_id, non-$ keys need to be updated with
+                    # the $set operator
+                    if '_id' in ret:
+                        bulk.find({'_id': ret['_id']}).upsert().update_one(
+                            {'$set': ret}
+                        )
+                    else:
+                        # if no _id, do simple insert
+                        bulk.insert(ret)
                     insert_size += _doc_size(ret)
                     insert_count += 1
                     # If past the threshold, do another check and write
@@ -183,7 +192,7 @@ using one and which to avoid collisions
                         insert_count = 0
                 else:
                     # No housekeeping checks, so save immediately with DB check
-                    dest.find_and_modify(ret, ret, upsert=True)
+                    dest.save(ret)
                 inserts += 1
             good += 1
         except:
