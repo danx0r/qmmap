@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+from bson.json_util import loads
 import importlib
 import json
 import os
@@ -126,7 +127,7 @@ one collection into other by use of a function.
     del arg_dict['pyconfig']
     del arg_dict['jsonconfig']
     # Convert query to python dict
-    arg_dict['query'] = json.loads(arg_dict['query'])
+    arg_dict['query'] = loads(arg_dict['query'])
     qmmap.mmap(**arg_dict)
 
 
