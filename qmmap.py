@@ -356,8 +356,8 @@ def mmap(   cb,
             manage(timeout, sleep)
         elif not process_only:
             computed_chunk_size = _calc_chunksize(
-                dbs[source_col].count(), multi, chunk_size)
-            if verbose & 2: print "chunk size:", chunk_size
+                dbs[source_col].find(query).count(), multi, chunk_size)
+            if verbose & 2: print "chunk size:", computed_chunk_size
             if reset:
                 print >> sys.stderr, ("Dropping all records in destination db" +
                     "/collection {0}/{1}").format(dbd, dest.name)
