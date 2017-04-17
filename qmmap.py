@@ -307,7 +307,7 @@ def procname():
     """Utility for getting a globally-unique process name, which needs to combine
 hostname and process id
 @returns: string with format "<fully qualified hostname>:<process id>"."""
-    return "{0}:{1}".format(socket.getfqdn(), os.getpid())
+    return "{:>18}:{}".format(socket.getfqdn(), os.getpid())
 
 
 def mmap(   cb,
@@ -453,7 +453,10 @@ def _print_proc(log_str):
     """Utility function for writing to STDERR with procname prepended
     @log_str: string to write
     """
-    print >> sys.stderr, procname(), log_str
+#     print >> sys.stderr, procname(), log_str
+#make atomic so no interrupted output lines:
+    sys.stderr.write("%s %s\n" % (procname(), log_str) )
+    sys.stderr.flush()
 
 
 def _print_progress():
