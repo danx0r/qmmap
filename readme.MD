@@ -1,8 +1,8 @@
-#QMmap
+# QMmap
 
-##Distributed MongoDB Map
+## Distributed MongoDB Map
 
-###from hiQ Labs (www.hiqlabs.com)
+### from hiQ Labs (www.hiqlabs.com)
 
 QMmap is a lightweight library that enables asynchronous, parallel processing of MongoDB documents using a simple, map-like interface.
 
