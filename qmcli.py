@@ -116,7 +116,7 @@ one collection into other by use of a function.
     if clargs.pyconfig:
         configmod = importlib.import_module(clargs.pyconfig)
         config_dict = {
-            x: y for x, y in vars(configmod).iteritems() if not x.startswith("__")
+            x: y for x, y in vars(configmod).items() if not x.startswith("__")
         }
         arg_dict.update(config_dict)
     if clargs.init:

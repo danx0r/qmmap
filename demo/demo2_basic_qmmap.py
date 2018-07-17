@@ -15,4 +15,4 @@ def func(source):
     return {'_id': source['_id']*10}
 
 ret = mmap(func, "qmmap_in", "qmmap_out")
-print list(ret.find())
+print((list(ret.find())))

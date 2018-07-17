@@ -24,14 +24,14 @@ def process(source):
     return gd.to_mongo()
 
 def randstring(size):
-    return "".join(chr(random.randint(65, 65+25)) for i in xrange(size))
+    return "".join(chr(random.randint(65, 65+25)) for i in range(size))
 
 def make_random_input(num, size):
     """Randomize an input data set in the qmmap_src collection
     @num: number of elements
     @size: size, in characters, of each string in the input
     """
-    for i in xrange(num):
+    for i in range(num):
         src = qmmap_src()
         src.s1 = randstring(config.size)
         src.s2 = randstring(config.size)
@@ -65,30 +65,30 @@ if __name__ == "__main__":
 
     if not config.process_only:
         if not config.skipdata:
-            if raw_input("drop qmmap_src, qmmap_dest, housekeeping(qmmap_src_qmmap_dest)?")[:1] == 'y':
+            if input("drop qmmap_src, qmmap_dest, housekeeping(qmmap_src_qmmap_dest)?")[:1] == 'y':
                 db.qmmap_src.drop()
                 db.qmmap_dest.drop()
                 db.qmmap_src_qmmap_dest.drop()
         
-            print "Generating test data, this may be slow..."
+            print("Generating test data, this may be slow...")
             make_random_input(config.num, config.size)
         else:
-            if raw_input("drop qmmap_dest, housekeeping(qmmap_src_qmmap_dest)?")[:1] == 'y':
+            if input("drop qmmap_dest, housekeeping(qmmap_src_qmmap_dest)?")[:1] == 'y':
                 db.qmmap_dest.drop()
                 db.qmmap_src_qmmap_dest.drop()
     
-    print "Running mmap..."
+    print("Running mmap...")
     t = time.time()
     qmmap.mmap(process, "qmmap_src", "qmmap_dest", init=init,
         multi=config.processes, verbose=config.verbose, init_only=config.init_only,
         process_only=config.process_only, timeout=config.timeout,
         sleep=config.sleep)
-    print "time processing:", time.time() - t, "seconds"
-    print "representative output:"
+    print("time processing:", time.time() - t, "seconds")
+    print("representative output:")
 #     print list(db.qmmap_dest.find())
     for o in qmmap_dest.objects.limit(3):
-        print o.s[:20]
-    print
+        print(o.s[:20])
+    print()
 
     #inspect housekeeping collection for fun & profit
     good = 0
@@ -96,4 +96,4 @@ if __name__ == "__main__":
     for hk in db.qmmap_src_qmmap_dest.find():
         good += hk['good']
         total += hk['total']
-    print "%d succesful operations out of %d" % (good, total)
+    print("%d succesful operations out of %d" % (good, total))

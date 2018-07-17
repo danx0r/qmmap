@@ -34,4 +34,4 @@ for i in range(10):
 ret = mmap(func, "qmmap_in", "qmmap_out")
 
 for o in qmmap_out.objects:
-    print o.val,
+    print(o.val, end=' ')

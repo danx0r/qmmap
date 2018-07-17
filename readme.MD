@@ -13,11 +13,11 @@ Python's `map` function takes a callback function and applies it to a list, retu
 ```Python
 # demo/demo1_basic_map.py
 
-src = [x for x in range(10)]
+src = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 def func(v):
     return v*10
 
-print map(func, src)
+list(map(func, src))
 
 ```
 *IPython output:*
@@ -43,7 +43,7 @@ def func(source):
     return {'_id': source['_id']*10}
 
 ret = mmap(func, "qmmap_in", "qmmap_out")
-print list(ret.find())
+list(ret.find())
 ```
     [{u'_id': 0}, {u'_id': 10}, {u'_id': 20}, {u'_id': 30}, {u'_id': 40}, {u'_id': 50}, {u'_id': 60}, {u'_id': 70}, {u'_id': 80}, {u'_id': 90}]
 
@@ -73,7 +73,7 @@ def func(source):
 ret = mmap(func, "qmmap_in", "qmmap_out")
 
 for o in qmmap_out.objects:
-    print o.val,
+    print (o.val)
 ```
 
     0 10 20 30 40 50 60 70 80 90

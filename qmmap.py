@@ -41,7 +41,7 @@ def _connect(srccol, destcol, dest_uri=None):
 def _init(srccol, destcol, key, query, chunk_size, verbose):
     housekeep.drop_collection()
     q = srccol.find(query, [key]).sort([(key, pymongo.ASCENDING)])
-    if verbose & 2: print "initializing %d entries, housekeeping for %s" % (q.count(), housekeep._get_collection_name())
+    if verbose & 2: print("initializing %d entries, housekeeping for %s" % (q.count(), housekeep._get_collection_name()))
 #     else:
 #         raise Exception("no incremental yet")
 # #         last = housekeep.objects().order_by('-start')[0].end
@@ -53,14 +53,14 @@ def _init(srccol, destcol, key, query, chunk_size, verbose):
     i = 0
     tot = q.limit(chunk_size).count(with_limit_and_skip=True)
     while tot > 0:
-        if verbose & 2: print "housekeeping: %d" % i
+        if verbose & 2: print("housekeeping: %d" % i)
         i +=1
         sys.stdout.flush()
         hk = housekeep()
         hk.start = q[0][key]
         hk.end =  q[min(chunk_size-1, tot-1)][key]
         if (hk.start == None or hk.end == None):
-            if verbose & 2: print >> sys.stderr, "ERROR: key field has None. start: %s end: %s" % (hk.start, hk.end)
+            if verbose & 2: print("ERROR: key field has None. start: %s end: %s" % (hk.start, hk.end), file=sys.stderr)
             raise Exception("key error")
         #calc total for this segment
         qq = {'$and': [query, {key: {'$gte': hk.start}}, {key: {'$lte': hk.end}}]}
@@ -84,16 +84,16 @@ to work on, i.e. whether its status is "working" and this process is assigned to
     # If it's been reset to open, or being worked on by another node, no good
     state = chunk.state
     if state == "done":
-        print "Chunk {0} is already finished".format(hkstart)
+        print("Chunk {0} is already finished".format(hkstart))
         sys.stdout.flush()
         return False
     if state == "open":
-        print "Chunk {0} had been reset to open".format(hkstart)
+        print("Chunk {0} had been reset to open".format(hkstart))
         sys.stdout.flush()
         return False
     if state == "working" and chunk.procname != procname():
-        print "Chunk {0} was taken over by {1}, moving on".format(
-            hkstart, chunk.procname)
+        print("Chunk {0} was taken over by {1}, moving on".format(
+            hkstart, chunk.procname))
         sys.stdout.flush()
         return False
     return True
@@ -183,8 +183,8 @@ using one and which to avoid collisions
                     if insert_size > WRITE_THRESHOLD:
                         if not _is_okay_to_work_on(hkstart):
                             return -1
-                        print u"Writing to chunk {0} : {1} docs totaling " \
-                            u"{2} bytes".format(hkstart, insert_count, insert_size)
+                        print("Writing to chunk {0} : {1} docs totaling " \
+                            "{2} bytes".format(hkstart, insert_count, insert_size))
                         sys.stdout.flush()
                         _write_bulk(bulk)
                         bulk = dest.initialize_unordered_bulk_op()
@@ -205,12 +205,12 @@ using one and which to avoid collisions
         return -1
     if hkstart:  # Do bulk insert only if doing housekeeping
         if insert_count > 0:
-            _print_proc(u"Writing to chunk {0} : {1} docs totaling {2} " \
-                u"bytes".format(hkstart, insert_count, insert_size))
+            _print_proc("Writing to chunk {0} : {1} docs totaling {2} " \
+                "bytes".format(hkstart, insert_count, insert_size))
             _write_bulk(bulk)
         else:
-            _print_proc(u"No bulk writes to do at end of chunk" \
-                u" {0}".format(hkstart))
+            _print_proc("No bulk writes to do at end of chunk" \
+                " {0}".format(hkstart))
     if not verbose & 1:
         sys.stdout = oldstdout
     sys.stdout.flush()
@@ -255,7 +255,7 @@ def do_chunks(init, proc, src_col, dest_col, query, key, sort, verbose, sleep=60
                 cursor = cursor.sort(sort[1:], pymongo.DESCENDING)
             else:
                 cursor = cursor.sort(sort, pymongo.ASCENDING)
-            if verbose & 2: print "mongo_process: %d elements in chunk %s-%s" % (cursor.count(), hko.start, hko.end)
+            if verbose & 2: print("mongo_process: %d elements in chunk %s-%s" % (cursor.count(), hko.start, hko.end))
             sys.stdout.flush()
             # This is where processing happens
             hko.good =_process(init, proc, cursor, dest_col, verbose,
@@ -263,10 +263,10 @@ def do_chunks(init, proc, src_col, dest_col, query, key, sort, verbose, sleep=60
             # Check if another job finished it while this one was plugging away
             hko_later = housekeep.objects(start = raw_id).only('state')[0]
             if hko.good == -1:  # Early exit signal
-                print "Chunk at %s lost to another process; not updating" % raw_id
+                print("Chunk at %s lost to another process; not updating" % raw_id)
                 sys.stdout.flush()
             elif hko_later.state == 'done':
-                print "Chunk at %s had already finished; not updating" % raw_id
+                print("Chunk at %s had already finished; not updating" % raw_id)
                 sys.stdout.flush()
             else:
                 hko.state = 'done'
@@ -276,7 +276,7 @@ def do_chunks(init, proc, src_col, dest_col, query, key, sort, verbose, sleep=60
         else:
             # Not all done, but none were open for processing; thus, wait to
             # see if one re-opens
-            print 'Standing by for reopening of "working" job...'
+            print('Standing by for reopening of "working" job...')
             sys.stdout.flush()
             time.sleep(sleep)
 
@@ -357,10 +357,10 @@ def mmap(   cb,
         elif not process_only:
             computed_chunk_size = _calc_chunksize(
                 dbs[source_col].find(query).count(), multi, chunk_size)
-            if verbose & 2: print "chunk size:", computed_chunk_size
+            if verbose & 2: print("chunk size:", computed_chunk_size)
             if reset:
-                print >> sys.stderr, ("Dropping all records in destination db" +
-                    "/collection {0}/{1}").format(dbd, dest.name)
+                print(("Dropping all records in destination db" +
+                    "/collection {0}/{1}").format(dbd, dest.name), file=sys.stderr)
                 dest.remove({})
             _init(dbs[source_col], dest, key, query, computed_chunk_size, verbose)
         # Now process code, if one of the other "only_" options isn't turned on
@@ -368,15 +368,15 @@ def mmap(   cb,
             args = (init, cb, dbs[source_col], dest, query, key, sort, verbose,
                 sleep)
             if verbose & 2:
-                print "Chunking with arguments %s" % (args,)
+                print("Chunking with arguments %s" % (args,))
             if is_shell():
-                print >> sys.stderr, ("WARNING -- can't generate module name. Multiprocessing will be emulated...")
+                print(("WARNING -- can't generate module name. Multiprocessing will be emulated..."), file=sys.stderr)
                 do_chunks(*args)
             else:
                 if multi > 1:
-                    for j in xrange(multi):
+                    for j in range(multi):
                         if verbose & 2:
-                            print "Launching subprocess %s" % j
+                            print("Launching subprocess %s" % j)
                         proc = Process(target=do_chunks, args=args)
                         proc.start()
                 else:
@@ -437,13 +437,13 @@ def wait(timeout=120, verbose=True):
     while r:
 #         print "DEBUG r %f rr %f t %f" % (r, rr, time.time() - t)
         if time.time() - t > timeout:
-            if verbose: print >> sys.stderr, "TIMEOUT reached - resetting working chunks to open"
+            if verbose: print("TIMEOUT reached - resetting working chunks to open", file=sys.stderr)
             q = housekeep.objects(state = "working")
             if q:
                 q.update(state="open", procname='none')
         if r != rr:
             t = time.time()
-        if verbose: print r, "chunks remaning to be processed; %f seconds left until timeout" % (timeout - (time.time() - t)) 
+        if verbose: print(r, "chunks remaning to be processed; %f seconds left until timeout" % (timeout - (time.time() - t))) 
         time.sleep(1)
         rr = r
         r = remaining()
@@ -473,12 +473,12 @@ def _print_progress():
             tdone = float((last-first).seconds)
             ttot = tdone*tot / done
             trem = ttot - tdone
-            print "%s still waiting: %d out of %d complete (%.3f%%). %.3f seconds complete, %.3f remaining (%.5f hours)" \
-            % (datetime.datetime.utcnow().strftime("%H:%M:%S:%f"), done, tot, pdone, tdone, trem, trem / 3600.0)
+            print("%s still waiting: %d out of %d complete (%.3f%%). %.3f seconds complete, %.3f remaining (%.5f hours)" \
+            % (datetime.datetime.utcnow().strftime("%H:%M:%S:%f"), done, tot, pdone, tdone, trem, trem / 3600.0))
         else:
-            print "No progress data yet"
+            print("No progress data yet")
     else:
-        print "%s still waiting; nothing done so far" % (datetime.datetime.utcnow(),)
+        print("%s still waiting; nothing done so far" % (datetime.datetime.utcnow(),))
 sys.stdout.flush()
 
 
@@ -489,7 +489,7 @@ def manage(timeout, sleep=120):
     timeout = time (sec) to give a job until it's restarted
     """
     num_not_done = _num_not_at_state('done')
-    print "Managing job's execution; currently {0} remaining".format(num_not_done)
+    print("Managing job's execution; currently {0} remaining".format(num_not_done))
     sys.stdout.flush()
     # Keep going until none are state=working or done
     while _num_not_at_state('done') > 0:
@@ -504,15 +504,15 @@ def manage(timeout, sleep=120):
         for hkw in hkwquery:
             # .tstart must have time value for state to equal 'working' at all
             time_taken = (tnow - hkw.tstart).total_seconds()
-            print (u"Chunk on {0} starting at {1} has been working for {2} " +
-                u"sec").format(hkw.procname, hkw.start, time_taken)
+            print(("Chunk on {0} starting at {1} has been working for {2} " +
+                "sec").format(hkw.procname, hkw.start, time_taken))
             sys.stdout.flush()
             if time_taken > timeout:
-                print (u"More than {0} sec spent on chunk {1} ;" +
-                    u" setting status back to open").format(
-                    timeout, hkw.start)
+                print(("More than {0} sec spent on chunk {1} ;" +
+                    " setting status back to open").format(
+                    timeout, hkw.start))
                 sys.stdout.flush()
                 hkw.state = "open"
                 hkw.procname = 'none'
                 hkw.save()
-    print "----------- PROCESSING COMPLETED ------------"
+    print("----------- PROCESSING COMPLETED ------------")
