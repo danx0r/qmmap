@@ -2,7 +2,8 @@
 # pymongo object
 import sys, os
 PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..") ) 
-sys.path.append(PYBASE)
+sys.path.insert(0, PYBASE)
+
 import pymongo
 from qmmap import mmap
 

@@ -3,7 +3,7 @@
 
 import sys, os
 PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..") ) 
-sys.path.append(PYBASE)
+sys.path.insert(0, PYBASE)
 
 from mongoengine import Document, IntField, connect
 import pymongo 
@@ -18,9 +18,6 @@ class qmmap_in(Document):
 
 class qmmap_out(Document):
     val = IntField(primary_key = True)
-
-def init(source, dest):
-    connectMongoEngine(dest)
 
 def func(source):
     gs = toMongoEngine(source, qmmap_in)

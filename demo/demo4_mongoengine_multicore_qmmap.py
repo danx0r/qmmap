@@ -3,7 +3,7 @@
 
 import sys, os
 PYBASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..") ) 
-sys.path.append(PYBASE)
+sys.path.insert(0, PYBASE)
 
 import pymongo
 from mongoengine import Document, IntField, connect
@@ -11,7 +11,7 @@ from mongoengine import Document, IntField, connect
 from qmmap import toMongoEngine, connectMongoEngine, mmap
 
 
-connect("test")
+# connect("test") ###not needed if multi>1
 
 class qmmap_in(Document):
     num = IntField(primary_key = True)
@@ -22,7 +22,7 @@ class qmmap_out(Document):
     comp = IntField()
 
 def init(source, dest):
-    connectMongoEngine(dest)
+    print ("initialize for chunk here")
 
 def func(source):
     gs = toMongoEngine(source, qmmap_in)
@@ -34,7 +34,7 @@ db = pymongo.MongoClient().test
 for i in range(10):
     db.qmmap_in.save({'_id': i, 'extra': i + 1})
 
-ret = mmap(func, "qmmap_in", "qmmap_out", multi=2, sleep=2, reset=True)
+ret = mmap(func, "qmmap_in", "qmmap_out", multi=2, sleep=2, reset=True,  init=init)
 
 for o in qmmap_out.objects:
     print((o.val, o.comp))
