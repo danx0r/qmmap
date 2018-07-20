@@ -141,7 +141,7 @@ using one and which to avoid collisions
         try:
             # Pass a copy of the source and destination cursors so they won't
             # affect iteration in the rest of _process
-            context = init(_copy_cursor(src), _copy_cursor(dest))
+            context = init(_copy_cursor(src), dest)#_copy_cursor(dest))
         except:
             _print_proc("***EXCEPTION (process)***")
             _print_proc(traceback.format_exc())
@@ -347,7 +347,10 @@ def mmap(   cb,
         dbd = pymongo.MongoClient(dest_uri, connect=False).get_default_database()
     dest = dbd[dest_col]
     if multi == None:  # don't use housekeeping, run straight process
-
+        if reset:
+            print(("Dropping all records in destination db" +
+                   "/collection {0}/{1}").format(dbd, dest.name), file=sys.stderr)
+            dest.remove({})
         source = dbs[source_col].find(query)
         _process(init, cb, source, dest, verbose)
     else:
