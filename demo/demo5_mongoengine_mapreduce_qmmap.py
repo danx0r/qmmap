@@ -23,13 +23,16 @@ class qmmap_out(Document):
 
 def init(source, dest):
     print ("A",dest)
-    global g_dest
-    g_dest=dest                    #pass to func in global space for each chunk/process
 
 def func(source):
-    print ("FUNC:", g_dest, g_dest.count())
+    print ("FUNC:", qmmap_out.objects.count())
     gs = toMongoEngine(source, qmmap_in)
     times10 = gs.num * 10
+    if gs.num == 4:
+        gd = qmmap_out.objects(comp=23)[0]
+        gd.comp=1111111
+        gd.save()
+        return
     gd = qmmap_out(val=times10, comp=times10 + gs.extra)
     return gd.to_mongo()
 
@@ -37,7 +40,7 @@ db = pymongo.MongoClient().test
 for i in range(10):
     db.qmmap_in.save({'_id': i, 'extra': i + 1})
 
-ret = mmap(func, "qmmap_in", "qmmap_out", multi=1, sleep=2, reset=True,  init=init)
+ret = mmap(func, "qmmap_in", "qmmap_out", multi=2, sleep=2, reset=True,  init=init)
 
 for o in qmmap_out.objects:
     print((o.val, o.comp))
