@@ -491,7 +491,9 @@ def manage(timeout, sleep=120):
     sleep = time (sec) between status updates
     timeout = time (sec) to give a job until it's restarted
     """
+    T0 = time.time()
     num_not_done = _num_not_at_state('done')
+    tot=num_not_done
     print("Managing job's execution; currently {0} remaining".format(num_not_done))
     sys.stdout.flush()
     # Keep going until none are state=working or done
@@ -519,3 +521,5 @@ def manage(timeout, sleep=120):
                 hkw.procname = 'none'
                 hkw.save()
     print("----------- PROCESSING COMPLETED ------------")
+    T1 = time.time()
+    print ("Total time taken: %f seconds (%f hours); %d chunks at %f sec per chunk" % (T1-T0, (T1-T0)/3600, tot, (T1-T0)/tot))
