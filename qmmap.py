@@ -473,7 +473,7 @@ def _print_progress():
         q = q.order_by('-time')
         last = q[0].time
         if first and last:  # guard against lacking values
-            tdone = float((last-first).seconds)
+            tdone = float((last-first).total_seconds())
             ttot = tdone*tot / done
             trem = ttot - tdone
             print("%s still waiting: %d out of %d complete (%.3f%%). %.3f seconds complete, %.3f remaining (%.5f hours)" \
