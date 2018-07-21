@@ -522,4 +522,7 @@ def manage(timeout, sleep=120):
                 hkw.save()
     print("----------- PROCESSING COMPLETED ------------")
     T1 = time.time()
-    print ("Total time taken: %f seconds (%f hours); %d chunks at %f sec per chunk" % (T1-T0, (T1-T0)/3600, tot, (T1-T0)/tot))
+    try:
+        print ("Total time taken: %f seconds (%f hours); %d chunks at %f sec per chunk" % (T1-T0, (T1-T0)/3600, tot, (T1-T0)/tot))
+    except:
+        print ("Not enough data to profile")
