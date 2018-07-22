@@ -357,7 +357,7 @@ def mmap(   cb,
             dest.remove({})
         source = dbs[source_col].find(query)
         if log:
-            log.begin(query, source.count(), dest.count())
+            log.begin(query, source.count(), dest.count(), multi)
         _process(init, cb, source, dest, verbose)
     else:
         _connect(dbs[source_col], dest, dest_uri)
@@ -373,7 +373,7 @@ def mmap(   cb,
                 dest.remove({})
             stot=_init(dbs[source_col], dest, key, query, computed_chunk_size, verbose)
             if log:
-                log.begin(query, stot, dest.count())
+                log.begin(query, stot, dest.count(), multi)
         # Now process code, if one of the other "only_" options isn't turned on
         if not manage_only and not init_only:
             args = (init, cb, dbs[source_col], dest, query, key, sort, verbose,
@@ -541,7 +541,11 @@ class qmmap_log(meng.DynamicDocument):
     def debug(self):
         print ("HK:",housekeep, housekeep.objects.count())
 
-    def begin(self, query, srccnt, destcnt):
+    def begin(self, query, srccnt, destcnt, multi):
+        if multi:
+            self.qmmap_chunks_allocated = housekeep.objects.count()
+            self.qmmap_first_chunk_size = housekeep.objects[0].total
+            self.qmmap_last_chunk_size = housekeep.objects[housekeep.objects.count()-1].total
         self.qmmap_start = datetime.datetime.utcnow()
         self.qmmap_query = str(query)
         self.qmmap_source_count_begin = srccnt
