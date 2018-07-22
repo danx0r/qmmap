@@ -3,7 +3,7 @@
 #
 import sys, os, importlib, datetime, time, traceback, __main__
 import socket
-
+from pprint import pformat
 import bson
 import pymongo
 from pymongo.read_preferences import ReadPreference
@@ -51,6 +51,7 @@ def _init(srccol, destcol, key, query, chunk_size, verbose):
 # #         if verbose & 2: print "added %d entries to %s" % (q.count(), housekeep._get_collection_name())
 # #         sys.stdout.flush()
     i = 0
+    gtotal=0
     tot = q.limit(chunk_size).count(with_limit_and_skip=True)
     while tot > 0:
         if verbose & 2: print("housekeeping: %d" % i)
@@ -65,6 +66,7 @@ def _init(srccol, destcol, key, query, chunk_size, verbose):
         #calc total for this segment
         qq = {'$and': [query, {key: {'$gte': hk.start}}, {key: {'$lte': hk.end}}]}
         hk.total = srccol.find(qq, [key]).count()
+        gtotal+=hk.total
         hk.save()
 
         #get start of next segment
@@ -72,6 +74,7 @@ def _init(srccol, destcol, key, query, chunk_size, verbose):
         q = srccol.find(qq, [key]).sort([(key, pymongo.ASCENDING)])
         #limit count to chunk for speed
         tot = q.limit(chunk_size).count(with_limit_and_skip=True)
+    return gtotal
 
 
 def _is_okay_to_work_on(hkstart):
@@ -329,6 +332,7 @@ def mmap(   cb,
             chunk_size=None,
             timeout=120,
             sleep=60,
+            log=False, #or instance of qmmap_log
             **kwargs):
 
     # Two different connect=False idioms; need to set it false to wait on
@@ -352,6 +356,8 @@ def mmap(   cb,
                    "/collection {0}/{1}").format(dbd, dest.name), file=sys.stderr)
             dest.remove({})
         source = dbs[source_col].find(query)
+        if log:
+            log.begin(query, source.count(), dest.count())
         _process(init, cb, source, dest, verbose)
     else:
         _connect(dbs[source_col], dest, dest_uri)
@@ -365,7 +371,9 @@ def mmap(   cb,
                 print(("Dropping all records in destination db" +
                     "/collection {0}/{1}").format(dbd, dest.name), file=sys.stderr)
                 dest.remove({})
-            _init(dbs[source_col], dest, key, query, computed_chunk_size, verbose)
+            stot=_init(dbs[source_col], dest, key, query, computed_chunk_size, verbose)
+            if log:
+                log.begin(query, stot, dest.count())
         # Now process code, if one of the other "only_" options isn't turned on
         if not manage_only and not init_only:
             args = (init, cb, dbs[source_col], dest, query, key, sort, verbose,
@@ -387,6 +395,8 @@ def mmap(   cb,
             if wait_done:
                 manage(timeout, sleep)
                 #wait(timeout, verbose & 2)
+    if log:
+        log.finish(dest.count(), multi)
     return dbd[dest_col]
 
 def toMongoEngine(pmobj, metype):
@@ -526,3 +536,29 @@ def manage(timeout, sleep=120):
         print ("Total time taken: %f seconds (%f hours); %d chunks at %f sec per chunk" % (T1-T0, (T1-T0)/3600, tot, (T1-T0)/tot))
     except:
         print ("Not enough data to profile")
+
+class qmmap_log(meng.DynamicDocument):
+    def debug(self):
+        print ("HK:",housekeep, housekeep.objects.count())
+
+    def begin(self, query, srccnt, destcnt):
+        self.qmmap_start = datetime.datetime.utcnow()
+        self.qmmap_query = str(query)
+        self.qmmap_source_count_begin = srccnt
+        self.qmmap_dest_count_begin = destcnt
+        self.save()
+
+    def finish(self, destcnt, multi):
+        self.qmmap_finish = datetime.datetime.utcnow()
+        if multi:
+            tot = 0
+            for x in housekeep.objects:
+                tot += x.good
+            self.qmmap_records_processed = tot
+            self.qmmap_chunks_allocated = housekeep.objects.count()
+            self.qmmap_chunks_processed = housekeep.objects(state='done').count()
+        self.qmmap_dest_count_end = destcnt
+        self.save()
+
+    def __repr__(self):
+        return pformat(self.to_mongo().to_dict())
