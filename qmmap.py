@@ -544,8 +544,9 @@ class qmmap_log(meng.DynamicDocument):
     def begin(self, query, srccnt, destcnt, multi):
         if multi:
             self.qmmap_chunks_allocated = housekeep.objects.count()
-            self.qmmap_first_chunk_size = housekeep.objects[0].total
-            self.qmmap_last_chunk_size = housekeep.objects[housekeep.objects.count()-1].total
+            if housekeep.objects.count():
+                self.qmmap_first_chunk_size = housekeep.objects[0].total
+                self.qmmap_last_chunk_size = housekeep.objects[housekeep.objects.count()-1].total
         self.qmmap_start = datetime.datetime.utcnow()
         self.qmmap_query = str(query)
         self.qmmap_source_count_begin = srccnt
