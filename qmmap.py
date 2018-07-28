@@ -64,7 +64,6 @@ class qmmap_log(meng.DynamicDocument):
             self.chunks_allocated = housekeep.objects.count()
             self.chunks_processed = housekeep.objects(state='done').count()
         self.dest_count_end = destcnt
-        print ("A:", self.to_mongo())
         self.save()
 
     def __repr__(self):
@@ -407,6 +406,8 @@ def mmap(   cb,
         _connect(dbs[source_col], dest, dest_uri)
         if incremental:
             last = qmmap_log.objects(finished__exists=True).order_by("-finished")[0].last_processed
+            if query != {}:
+                print ("WARNING: incremental does not play well with a filtered query")
             if '_id' in query:
                 raise Exception("_id replaced -- FIXME")
             query['_id'] = {'$gt': last}
