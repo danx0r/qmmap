@@ -39,26 +39,32 @@ class qmmap_log(meng.DynamicDocument):
 
     def begin(self, query, srccnt, destcnt, multi):
         if multi:
-            self.qmmap_chunks_allocated = housekeep.objects.count()
-            if housekeep.objects.count():
-                self.qmmap_first_chunk_size = housekeep.objects[0].total
-                self.qmmap_last_chunk_size = housekeep.objects[housekeep.objects.count()-1].total
-        self.qmmap_start = datetime.datetime.utcnow()
-        self.qmmap_query = str(query)
-        self.qmmap_source_count_begin = srccnt
-        self.qmmap_dest_count_begin = destcnt
+            chunks = housekeep.objects.count()
+            self.chunks_allocated = chunks
+            if chunks:
+                first_chunk = housekeep.objects[0]
+                self.first_chunk_size = first_chunk.total
+                self.first_processed = first_chunk.start
+                last_chunk = housekeep.objects[chunks-1]
+                self.last_chunk_size = last_chunk.total
+                self.last_processed = last_chunk.end
+        self.start = datetime.datetime.utcnow()
+        self.query = str(query)
+        self.source_count_begin = srccnt
+        self.dest_count_begin = destcnt
         self.save()
 
     def finish(self, destcnt, multi):
-        self.qmmap_finish = datetime.datetime.utcnow()
+        self.finished = datetime.datetime.utcnow()
         if multi:
             tot = 0
             for x in housekeep.objects:
                 tot += x.good
-            self.qmmap_records_processed = tot
-            self.qmmap_chunks_allocated = housekeep.objects.count()
-            self.qmmap_chunks_processed = housekeep.objects(state='done').count()
-        self.qmmap_dest_count_end = destcnt
+            self.records_processed = tot
+            self.chunks_allocated = housekeep.objects.count()
+            self.chunks_processed = housekeep.objects(state='done').count()
+        self.dest_count_end = destcnt
+        print ("A:", self.to_mongo())
         self.save()
 
     def __repr__(self):
@@ -366,7 +372,9 @@ def mmap(   cb,
             timeout=120,
             sleep=60,
             log=False, #True (create log), or instance of qmmap_log
-            **kwargs):
+            incremental=False,
+            # **kwargs,
+            ):
 
     # Two different connect=False idioms; need to set it false to wait on
     # connecting in case of process being spawned.
@@ -384,6 +392,7 @@ def mmap(   cb,
         dbd = pymongo.MongoClient(dest_uri, connect=False).get_default_database()
     dest = dbd[dest_col]
     if multi == None:  # don't use housekeeping, run straight process
+        print ("multi==None disables logging and incremental")
         if reset:
             print(("Dropping all records in destination db" +
                    "/collection {0}/{1}").format(dbd, dest.name), file=sys.stderr)
@@ -396,6 +405,11 @@ def mmap(   cb,
         _process(init, cb, source, dest, verbose)
     else:
         _connect(dbs[source_col], dest, dest_uri)
+        if incremental:
+            last = qmmap_log.objects(finished__exists=True).order_by("-finished")[0].last_processed
+            if '_id' in query:
+                raise Exception("_id replaced -- FIXME")
+            query['_id'] = {'$gt': last}
         if manage_only:
             manage(timeout, sleep)
         elif not process_only:
