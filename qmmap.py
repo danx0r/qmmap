@@ -426,6 +426,11 @@ def mmap(   cb,
                 q = log
                 log = qmmap_log()
                 log.begin(query, stot, dest.count(), multi, q)
+                if incremental:
+                    delta=log.first_processed.generation_time - last.generation_time
+                    if delta.total_seconds() < 60:
+                        print("WARNING: potential out-of-order ObjectID's %s and %s are only %s seconds apart" %
+                          (last, log.first_processed, delta))
         # Now process code, if one of the other "only_" options isn't turned on
         if not manage_only and not init_only:
             args = (init, cb, dbs[source_col], dest, query, key, sort, verbose,

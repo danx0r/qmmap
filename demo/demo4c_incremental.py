@@ -15,7 +15,7 @@ from qmmap import toMongoEngine, connectMongoEngine, mmap, qmmap_log
 # connect("test") ###not needed if multi>1
 
 class qmmap_in(Document):
-    num = IntField(primary_key = True)
+    num = IntField()
     extra = IntField()
 
 class qmmap_out(Document):
@@ -36,7 +36,7 @@ db.qmmap_in.drop()
 db.qmmap_out.drop()
 
 for i in range(10):
-    db.qmmap_in.save({'_id': i, 'extra': i + 1})
+    db.qmmap_in.save({'num': i, 'extra': i + 1})
 
 ret = mmap(func, "qmmap_in", "qmmap_out", multi=2, sleep=2, reset=True, init=init, log=True, verbose=3)
 
@@ -47,7 +47,7 @@ pp(qmmap_log.objects.order_by("-finish")[0].to_mongo())
 
 print ("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 for i in range(10, 15, 1):
-    db.qmmap_in.save({'_id': i, 'extra': i + 1})
+    db.qmmap_in.save({'num': i, 'extra': i + 1})
 
 ret = mmap(func, "qmmap_in", "qmmap_out", multi=2, sleep=2, reset=False, init=init, log={'extra':'info'}, incremental=True, verbose=3)
 
