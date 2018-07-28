@@ -411,6 +411,8 @@ def mmap(   cb,
             if '_id' in query:
                 raise Exception("_id replaced -- FIXME")
             query['_id'] = {'$gt': last}
+            if verbose & 2:
+                print ("query modified for incremental:", query)
         if manage_only:
             manage(timeout, sleep)
         elif not process_only:
