@@ -398,7 +398,9 @@ def mmap(   cb,
             dest.remove({})
         source = dbs[source_col].find(query)
         if log:
-            log = qmmap_log(query, stot, dest.count(), multi, log)
+            q = log
+            log = qmmap_log()
+            log.begin(query, stot, dest.count(), multi, q)
         _process(init, cb, source, dest, verbose)
     else:
         _connect(dbs[source_col], dest, dest_uri)
