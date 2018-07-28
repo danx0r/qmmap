@@ -33,10 +33,43 @@ class housekeep(meng.Document):
     time = meng.DateTimeField()  # Time when job finished
     meta = {'indexes': ['state', 'time']}
 
+class qmmap_log(meng.DynamicDocument):
+    def debug(self):
+        print ("HK:",housekeep, housekeep.objects.count())
+
+    def begin(self, query, srccnt, destcnt, multi):
+        if multi:
+            self.qmmap_chunks_allocated = housekeep.objects.count()
+            if housekeep.objects.count():
+                self.qmmap_first_chunk_size = housekeep.objects[0].total
+                self.qmmap_last_chunk_size = housekeep.objects[housekeep.objects.count()-1].total
+        self.qmmap_start = datetime.datetime.utcnow()
+        self.qmmap_query = str(query)
+        self.qmmap_source_count_begin = srccnt
+        self.qmmap_dest_count_begin = destcnt
+        self.save()
+
+    def finish(self, destcnt, multi):
+        self.qmmap_finish = datetime.datetime.utcnow()
+        if multi:
+            tot = 0
+            for x in housekeep.objects:
+                tot += x.good
+            self.qmmap_records_processed = tot
+            self.qmmap_chunks_allocated = housekeep.objects.count()
+            self.qmmap_chunks_processed = housekeep.objects(state='done').count()
+        self.qmmap_dest_count_end = destcnt
+        self.save()
+
+    def __repr__(self):
+        return pformat(self.to_mongo().to_dict())
+
 def _connect(srccol, destcol, dest_uri=None):
     connectMongoEngine(destcol, dest_uri)
     hk_colname = srccol.name + '_' + destcol.name
+    log_colname = hk_colname + "_log"
     switch_collection(housekeep, hk_colname).__enter__()
+    switch_collection(qmmap_log, log_colname).__enter__()
 
 def _init(srccol, destcol, key, query, chunk_size, verbose):
     housekeep.drop_collection()
@@ -332,7 +365,7 @@ def mmap(   cb,
             chunk_size=None,
             timeout=120,
             sleep=60,
-            log=False, #or instance of qmmap_log
+            log=False, #True (create log), or instance of qmmap_log
             **kwargs):
 
     # Two different connect=False idioms; need to set it false to wait on
@@ -357,6 +390,8 @@ def mmap(   cb,
             dest.remove({})
         source = dbs[source_col].find(query)
         if log:
+            if log==True:
+                log = qmmap_log()
             log.begin(query, source.count(), dest.count(), multi)
         _process(init, cb, source, dest, verbose)
     else:
@@ -373,6 +408,8 @@ def mmap(   cb,
                 dest.remove({})
             stot=_init(dbs[source_col], dest, key, query, computed_chunk_size, verbose)
             if log:
+                if log == True:
+                    log = qmmap_log()
                 log.begin(query, stot, dest.count(), multi)
         # Now process code, if one of the other "only_" options isn't turned on
         if not manage_only and not init_only:
@@ -536,34 +573,3 @@ def manage(timeout, sleep=120):
         print ("Total time taken: %f seconds (%f hours); %d chunks at %f sec per chunk" % (T1-T0, (T1-T0)/3600, tot, (T1-T0)/tot))
     except:
         print ("Not enough data to profile")
-
-class qmmap_log(meng.DynamicDocument):
-    def debug(self):
-        print ("HK:",housekeep, housekeep.objects.count())
-
-    def begin(self, query, srccnt, destcnt, multi):
-        if multi:
-            self.qmmap_chunks_allocated = housekeep.objects.count()
-            if housekeep.objects.count():
-                self.qmmap_first_chunk_size = housekeep.objects[0].total
-                self.qmmap_last_chunk_size = housekeep.objects[housekeep.objects.count()-1].total
-        self.qmmap_start = datetime.datetime.utcnow()
-        self.qmmap_query = str(query)
-        self.qmmap_source_count_begin = srccnt
-        self.qmmap_dest_count_begin = destcnt
-        self.save()
-
-    def finish(self, destcnt, multi):
-        self.qmmap_finish = datetime.datetime.utcnow()
-        if multi:
-            tot = 0
-            for x in housekeep.objects:
-                tot += x.good
-            self.qmmap_records_processed = tot
-            self.qmmap_chunks_allocated = housekeep.objects.count()
-            self.qmmap_chunks_processed = housekeep.objects(state='done').count()
-        self.qmmap_dest_count_end = destcnt
-        self.save()
-
-    def __repr__(self):
-        return pformat(self.to_mongo().to_dict())
