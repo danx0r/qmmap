@@ -405,7 +405,7 @@ def mmap(   cb,
     else:
         _connect(dbs[source_col], dest, dest_uri)
         if incremental:
-            last = qmmap_log.objects(finished__exists=True).order_by("-finished")[0].last_processed
+            last = qmmap_log.objects(finished__exists=True, last_processed__exists=True).order_by("-finished")[0].last_processed
             if query != {}:
                 print ("WARNING: incremental does not play well with a filtered query")
             if '_id' in query:
