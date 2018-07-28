@@ -34,10 +34,7 @@ class housekeep(meng.Document):
     meta = {'indexes': ['state', 'time']}
 
 class qmmap_log(meng.DynamicDocument):
-    def debug(self):
-        print ("HK:",housekeep, housekeep.objects.count())
-
-    def begin(self, query, srccnt, destcnt, multi):
+    def begin(self, query, srccnt, destcnt, multi, log):
         if multi:
             chunks = housekeep.objects.count()
             self.chunks_allocated = chunks
@@ -52,6 +49,9 @@ class qmmap_log(meng.DynamicDocument):
         self.query = str(query)
         self.source_count_begin = srccnt
         self.dest_count_begin = destcnt
+        if log != True:
+            for k, v in log.items():
+                setattr(self, k, v)
         self.save()
 
     def finish(self, destcnt, multi):
@@ -398,9 +398,7 @@ def mmap(   cb,
             dest.remove({})
         source = dbs[source_col].find(query)
         if log:
-            if log==True:
-                log = qmmap_log()
-            log.begin(query, source.count(), dest.count(), multi)
+            log = qmmap_log(query, stot, dest.count(), multi, log)
         _process(init, cb, source, dest, verbose)
     else:
         _connect(dbs[source_col], dest, dest_uri)
@@ -423,9 +421,9 @@ def mmap(   cb,
                 dest.remove({})
             stot=_init(dbs[source_col], dest, key, query, computed_chunk_size, verbose)
             if log:
-                if log == True:
-                    log = qmmap_log()
-                log.begin(query, stot, dest.count(), multi)
+                q = log
+                log = qmmap_log()
+                log.begin(query, stot, dest.count(), multi, q)
         # Now process code, if one of the other "only_" options isn't turned on
         if not manage_only and not init_only:
             args = (init, cb, dbs[source_col], dest, query, key, sort, verbose,

@@ -49,7 +49,7 @@ print ("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 for i in range(10, 15, 1):
     db.qmmap_in.save({'_id': i, 'extra': i + 1})
 
-ret = mmap(func, "qmmap_in", "qmmap_out", multi=2, sleep=2, reset=False, init=init, log=True, incremental=True, verbose=3)
+ret = mmap(func, "qmmap_in", "qmmap_out", multi=2, sleep=2, reset=False, init=init, log={'extra':'info'}, incremental=True, verbose=3)
 
 for o in qmmap_out.objects:
     print((o.val, o.comp))
