@@ -428,7 +428,7 @@ def mmap(   cb,
                 q = log
                 log = qmmap_log()
                 log.begin(query, stot, dest.count(), multi, q)
-                if incremental:
+                if incremental and 'first_processed' in log:
                     delta=log.first_processed.generation_time - last.generation_time
                     if delta.total_seconds() < 60:
                         print("WARNING: potential out-of-order ObjectID's %s and %s are only %s seconds apart" %
