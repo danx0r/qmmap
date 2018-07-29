@@ -205,36 +205,41 @@ using one and which to avoid collisions
         try:
             ret = proc(doc)
             if ret != None:
-                # If doing housekeeping, save for bulk insert since that will know
-                # whether these would be duplicate inserts
-                if hkstart:
-                    # if _id in ret, search by that and upsert/update_one;
-                    # assume that all non-_id, non-$ keys need to be updated with
-                    # the $set operator
-                    if '_id' in ret:
-                        bulk.find({'_id': ret['_id']}).upsert().update_one(
-                            {'$set': ret}
-                        )
-                    else:
-                        # if no _id, do simple insert
-                        bulk.insert(ret)
-                    insert_size += _doc_size(ret)
-                    insert_count += 1
-                    # If past the threshold, do another check and write
-                    if insert_size > WRITE_THRESHOLD:
-                        if not _is_okay_to_work_on(hkstart):
-                            return -1
-                        print("Writing to chunk {0} : {1} docs totaling " \
-                            "{2} bytes".format(hkstart, insert_count, insert_size))
-                        sys.stdout.flush()
-                        _write_bulk(bulk)
-                        bulk = dest.initialize_unordered_bulk_op()
-                        insert_size = 0
-                        insert_count = 0
+                if type(ret) not in (list, tuple):
+                    rets = (ret,)
                 else:
-                    # No housekeeping checks, so save immediately with DB check
-                    dest.save(ret)
-                inserts += 1
+                    rets = ret
+                for ret in rets:
+                    # If doing housekeeping, save for bulk insert since that will know
+                    # whether these would be duplicate inserts
+                    if hkstart:
+                        # if _id in ret, search by that and upsert/update_one;
+                        # assume that all non-_id, non-$ keys need to be updated with
+                        # the $set operator
+                        if '_id' in ret:
+                            bulk.find({'_id': ret['_id']}).upsert().update_one(
+                                {'$set': ret}
+                            )
+                        else:
+                            # if no _id, do simple insert
+                            bulk.insert(ret)
+                        insert_size += _doc_size(ret)
+                        insert_count += 1
+                        # If past the threshold, do another check and write
+                        if insert_size > WRITE_THRESHOLD:
+                            if not _is_okay_to_work_on(hkstart):
+                                return -1
+                            print("Writing to chunk {0} : {1} docs totaling " \
+                                "{2} bytes".format(hkstart, insert_count, insert_size))
+                            sys.stdout.flush()
+                            _write_bulk(bulk)
+                            bulk = dest.initialize_unordered_bulk_op()
+                            insert_size = 0
+                            insert_count = 0
+                    else:
+                        # No housekeeping checks, so save immediately with DB check
+                        dest.save(ret)
+                    inserts += 1
             good += 1
         except:
             _print_proc("***EXCEPTION (process)***")
