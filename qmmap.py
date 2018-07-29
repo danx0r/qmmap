@@ -220,6 +220,11 @@ using one and which to avoid collisions
                             bulk.find({'_id': ret['_id']}).upsert().update_one(
                                 {'$set': ret}
                             )
+                        elif '__MATCH_AND_UPSERT__' in ret:
+                            del ret['__MATCH_AND_UPSERT__']
+                            bulk.find(ret).upsert().update_one(
+                                {'$set': ret}
+                            )
                         else:
                             # if no _id, do simple insert
                             bulk.insert(ret)
