@@ -79,7 +79,11 @@ def _connect(srccol, destcol, dest_uri=None):
 def _init(srccol, destcol, key, query, chunk_size, verbose):
     housekeep.drop_collection()
     q = srccol.find(query, [key]).sort([(key, pymongo.ASCENDING)])
-    if verbose & 2: print("initializing %d entries, housekeeping for %s" % (q.count(), housekeep._get_collection_name()))
+    cnt = q.count()
+    if cnt==0:
+        print ("Zero rows to process: exiting")
+        return 0
+    if verbose & 2: print("initializing %d entries, housekeeping for %s" % (cnt, housekeep._get_collection_name()))
 #     else:
 #         raise Exception("no incremental yet")
 # #         last = housekeep.objects().order_by('-start')[0].end
@@ -400,6 +404,7 @@ def mmap(   cb,
         ).get_default_database()
         dbd = pymongo.MongoClient(dest_uri, connect=False).get_default_database()
     dest = dbd[dest_col]
+    stot = None
     if multi == None:  # don't use housekeeping, run straight process
         print ("multi==None disables logging and incremental")
         if reset:
@@ -407,10 +412,10 @@ def mmap(   cb,
                    "/collection {0}/{1}").format(dbd, dest.name), file=sys.stderr)
             dest.remove({})
         source = dbs[source_col].find(query)
-        if log:
-            q = log
-            log = qmmap_log()
-            log.begin(query, stot, dest.count(), multi, q)
+        # if log:
+        #     q = log
+        #     log = qmmap_log()
+        #     log.begin(query, stot, dest.count(), multi, q)
         _process(init, cb, source, dest, verbose)
     else:
         _connect(dbs[source_col], dest, dest_uri)
@@ -434,7 +439,7 @@ def mmap(   cb,
                     "/collection {0}/{1}").format(dbd, dest.name), file=sys.stderr)
                 dest.remove({})
             stot=_init(dbs[source_col], dest, key, query, computed_chunk_size, verbose)
-            if log:
+            if log and stot:
                 q = log
                 log = qmmap_log()
                 log.begin(query, stot, dest.count(), multi, q)
@@ -444,7 +449,7 @@ def mmap(   cb,
                         print("WARNING: potential out-of-order ObjectID's %s and %s are only %s seconds apart" %
                           (last, log.first_processed, delta))
         # Now process code, if one of the other "only_" options isn't turned on
-        if not manage_only and not init_only:
+        if not manage_only and not init_only and stot:
             args = (init, cb, dbs[source_col], dest, query, key, sort, verbose,
                 sleep)
             if verbose & 2:
@@ -464,7 +469,7 @@ def mmap(   cb,
             if wait_done:
                 manage(timeout, sleep)
                 #wait(timeout, verbose & 2)
-    if log:
+    if log and stot:
         log.finish(dest.count(), multi)
     return dbd[dest_col]
 
