@@ -225,8 +225,12 @@ using one and which to avoid collisions
                                 {'$set': ret}
                             )
                         elif '__MATCH_AND_UPSERT__' in ret:
+                            if ret['__MATCH_AND_UPSERT__'] == True:
+                                q = ret
+                            else:
+                                q = ret['__MATCH_AND_UPSERT__']
                             del ret['__MATCH_AND_UPSERT__']
-                            bulk.find(ret).upsert().update_one(
+                            bulk.find(q).upsert().update_one(
                                 {'$set': ret}
                             )
                         else:
