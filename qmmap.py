@@ -69,9 +69,12 @@ class qmmap_log(meng.DynamicDocument):
     def __repr__(self):
         return pformat(self.to_mongo().to_dict())
 
-def _connect(srccol, destcol, dest_uri=None):
+def _connect(srccol, destcol, dest_uri=None, job=None):
     connectMongoEngine(destcol, dest_uri)
-    hk_colname = srccol.name + '_' + destcol.name
+    if job == None:
+        hk_colname = srccol.name + '_' + destcol.name
+    else:
+        hk_colname = job
     log_colname = hk_colname + "_log"
     switch_collection(housekeep, hk_colname).__enter__()
     switch_collection(qmmap_log, log_colname).__enter__()
@@ -390,6 +393,7 @@ def mmap(   cb,
             sleep=60,
             log=False, #True (create log), or instance of qmmap_log
             incremental=False,
+            job=None
             # **kwargs,
             ):
 
@@ -422,7 +426,7 @@ def mmap(   cb,
         #     log.begin(query, stot, dest.count(), multi, q)
         _process(init, cb, source, dest, verbose)
     else:
-        _connect(dbs[source_col], dest, dest_uri)
+        _connect(dbs[source_col], dest, dest_uri, job=job)
         if incremental:
             last = qmmap_log.objects(finished__exists=True, last_processed__exists=True).order_by("-finished")[0].last_processed
             if query != {}:
@@ -430,6 +434,8 @@ def mmap(   cb,
             if '_id' in query:
                 raise Exception("_id replaced -- FIXME")
             query['_id'] = {'$gt': last}
+            if job:
+                query['job'] = job
             if verbose & 2:
                 print ("query modified for incremental:", query)
         if manage_only:

@@ -54,7 +54,9 @@ if __name__ == "__main__":
     par.add_argument("--process_only", action='store_true')
     par.add_argument("--timeout", type=int, default=120)
     par.add_argument("--sleep", type=int, default=60)
-    
+    par.add_argument("--job", default=None)
+    par.add_argument("--incremental", type=bool, default=False)
+
     config = par.parse_args()
 
     if config.make_input_only:
@@ -82,7 +84,7 @@ if __name__ == "__main__":
     qmmap.mmap(process, "qmmap_src", "qmmap_dest", init=init,
         multi=config.processes, verbose=config.verbose, init_only=config.init_only,
         process_only=config.process_only, timeout=config.timeout,
-        sleep=config.sleep)
+        sleep=config.sleep, job=config.job)
     print("time processing:", time.time() - t, "seconds")
     print("representative output:")
 #     print list(db.qmmap_dest.find())
