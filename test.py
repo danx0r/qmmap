@@ -54,8 +54,9 @@ if __name__ == "__main__":
     par.add_argument("--process_only", action='store_true')
     par.add_argument("--timeout", type=int, default=120)
     par.add_argument("--sleep", type=int, default=60)
+    par.add_argument("--chunk_size", type=int, default=None)
     par.add_argument("--job", default=None)
-    par.add_argument("--incremental", type=bool, default=False)
+    par.add_argument("--incremental", action='store_true')
 
     config = par.parse_args()
 
@@ -67,24 +68,22 @@ if __name__ == "__main__":
 
     if not config.process_only:
         if not config.skipdata:
-            if input("drop qmmap_src, qmmap_dest, housekeeping(qmmap_src_qmmap_dest)?")[:1] == 'y':
+            if input("drop qmmap_src, qmmap_dest?")[:1] == 'y':
                 db.qmmap_src.drop()
                 db.qmmap_dest.drop()
-                db.qmmap_src_qmmap_dest.drop()
-        
+
             print("Generating test data, this may be slow...")
             make_random_input(config.num, config.size)
         else:
-            if input("drop qmmap_dest, housekeeping(qmmap_src_qmmap_dest)?")[:1] == 'y':
+            if input("drop qmmap_dest?")[:1] == 'y':
                 db.qmmap_dest.drop()
-                db.qmmap_src_qmmap_dest.drop()
-    
+
     print("Running mmap...")
     t = time.time()
     qmmap.mmap(process, "qmmap_src", "qmmap_dest", init=init,
         multi=config.processes, verbose=config.verbose, init_only=config.init_only,
         process_only=config.process_only, timeout=config.timeout,
-        sleep=config.sleep, job=config.job)
+        sleep=config.sleep, job=config.job, incremental=False, chunk_size=config.chunk_size)
     print("time processing:", time.time() - t, "seconds")
     print("representative output:")
 #     print list(db.qmmap_dest.find())
@@ -95,7 +94,8 @@ if __name__ == "__main__":
     #inspect housekeeping collection for fun & profit
     good = 0
     total = 0
-    for hk in db.qmmap_src_qmmap_dest.find():
+    hkcol = config.job if config.job else "qmmap_src_qmmap_dest"
+    for hk in db[hkcol].find():
         good += hk['good']
         total += hk['total']
     print("%d succesful operations out of %d" % (good, total))
