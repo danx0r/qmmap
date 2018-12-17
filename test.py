@@ -83,7 +83,7 @@ if __name__ == "__main__":
     qmmap.mmap(process, "qmmap_src", "qmmap_dest", init=init,
         multi=config.processes, verbose=config.verbose, init_only=config.init_only,
         process_only=config.process_only, timeout=config.timeout,
-        sleep=config.sleep, job=config.job, incremental=False, chunk_size=config.chunk_size)
+        sleep=config.sleep, job=config.job, incremental=config.incremental, chunk_size=config.chunk_size)
     print("time processing:", time.time() - t, "seconds")
     print("representative output:")
 #     print list(db.qmmap_dest.find())
