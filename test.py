@@ -57,6 +57,7 @@ if __name__ == "__main__":
     par.add_argument("--chunk_size", type=int, default=None)
     par.add_argument("--job", default=None)
     par.add_argument("--incremental", action='store_true')
+    par.add_argument("--log", action='store_true')
 
     config = par.parse_args()
 
@@ -83,7 +84,8 @@ if __name__ == "__main__":
     qmmap.mmap(process, "qmmap_src", "qmmap_dest", init=init,
         multi=config.processes, verbose=config.verbose, init_only=config.init_only,
         process_only=config.process_only, timeout=config.timeout,
-        sleep=config.sleep, job=config.job, incremental=config.incremental, chunk_size=config.chunk_size)
+        sleep=config.sleep, job=config.job, incremental=config.incremental,
+        log=config.log, chunk_size=config.chunk_size)
     print("time processing:", time.time() - t, "seconds")
     print("representative output:")
 #     print list(db.qmmap_dest.find())

@@ -428,16 +428,21 @@ def mmap(   cb,
     else:
         _connect(dbs[source_col], dest, dest_uri, job=job)
         if incremental:
-            last = qmmap_log.objects(finished__exists=True, last_processed__exists=True).order_by("-finished")[0].last_processed
-            if query != {}:
-                print ("WARNING: incremental does not play well with a filtered query")
-            if '_id' in query:
-                raise Exception("_id replaced -- FIXME")
-            query['_id'] = {'$gt': last}
-            if job:
-                query['job'] = job
-            if verbose & 2:
-                print ("query modified for incremental:", query)
+            q = qmmap_log.objects(finished__exists=True, last_processed__exists=True).order_by("-finished")
+            if q.limit(1).count(with_limit_and_skip=True):
+                last = q[0].last_processed
+                if query != {}:
+                    print ("WARNING: incremental does not play well with a filtered query")
+                if '_id' in query:
+                    raise Exception("_id replaced -- FIXME")
+                query['_id'] = {'$gt': last}
+                if job:
+                    query['job'] = job
+                if verbose & 2:
+                    print ("query modified for incremental:", query)
+            else:
+                print ("No existing log file, ignoring incremental flag")
+                incremental=False
         if manage_only:
             manage(timeout, sleep)
         elif not process_only:
