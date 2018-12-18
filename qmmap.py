@@ -441,9 +441,13 @@ def mmap(   cb,
             else:
                 print ("No existing log file, ignoring incremental flag")
                 incremental=False
-        if job:
-            query['qmmap_job'] = job
-            print("query modified for job:", query)
+#
+# Note: we explicitly ALWAYS query for qmmmap_job even if it is None -- in which case
+# we process everything without a job the old way
+# IOW, backwards compatibility FTW
+#
+        query['qmmap_job'] = job
+        print("query modified for job:", query)
         if manage_only:
             manage(timeout, sleep)
         elif not process_only:
