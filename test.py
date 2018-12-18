@@ -5,6 +5,7 @@ import qmmap
 class qmmap_src(meng.Document):
     s1 = meng.StringField()
     s2 = meng.StringField()
+    qmmap_job = meng.StringField()
 
 class qmmap_dest(meng.Document):
     s = meng.StringField()
@@ -26,7 +27,7 @@ def process(source):
 def randstring(size):
     return "".join(chr(random.randint(65, 65+25)) for i in range(size))
 
-def make_random_input(num, size):
+def make_random_input(num, size, job=None):
     """Randomize an input data set in the qmmap_src collection
     @num: number of elements
     @size: size, in characters, of each string in the input
@@ -35,6 +36,9 @@ def make_random_input(num, size):
         src = qmmap_src()
         src.s1 = randstring(size)
         src.s2 = randstring(size)
+        if job:
+            if random.random() >= .5:
+                src.qmmap_job = job
         src.save()
 
 
@@ -64,7 +68,7 @@ if __name__ == "__main__":
     if config.make_input_only:
         if not config.skipdata:
             qmmap_src.objects.delete()
-        make_random_input(config.num, config.size)
+        make_random_input(config.num, config.size, config.job)
         sys.exit(0)
 
     if not config.process_only:
@@ -74,7 +78,7 @@ if __name__ == "__main__":
                 db.qmmap_dest.drop()
 
             print("Generating test data, this may be slow...")
-            make_random_input(config.num, config.size)
+            make_random_input(config.num, config.size, config.job)
         else:
             if input("drop qmmap_dest?")[:1] == 'y':
                 db.qmmap_dest.drop()

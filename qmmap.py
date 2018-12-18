@@ -436,13 +436,14 @@ def mmap(   cb,
                 if '_id' in query:
                     raise Exception("_id replaced -- FIXME")
                 query['_id'] = {'$gt': last}
-                if job:
-                    query['qmmap_job'] = job
                 if verbose & 2:
                     print ("query modified for incremental:", query)
             else:
                 print ("No existing log file, ignoring incremental flag")
                 incremental=False
+        if job:
+            query['qmmap_job'] = job
+            print("query modified for job:", query)
         if manage_only:
             manage(timeout, sleep)
         elif not process_only:
