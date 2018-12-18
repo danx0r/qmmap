@@ -33,8 +33,8 @@ def make_random_input(num, size):
     """
     for i in range(num):
         src = qmmap_src()
-        src.s1 = randstring(config.size)
-        src.s2 = randstring(config.size)
+        src.s1 = randstring(size)
+        src.s2 = randstring(size)
         src.save()
 
 

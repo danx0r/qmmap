@@ -437,7 +437,7 @@ def mmap(   cb,
                     raise Exception("_id replaced -- FIXME")
                 query['_id'] = {'$gt': last}
                 if job:
-                    query['job'] = job
+                    query['qmmap_job'] = job
                 if verbose & 2:
                     print ("query modified for incremental:", query)
             else:
