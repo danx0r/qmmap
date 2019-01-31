@@ -393,6 +393,7 @@ def mmap(   cb,
             sleep=60,
             log=False, #True (create log), or instance of qmmap_log
             incremental=False,
+            delete_temp_collections=False,
             job=None
             # **kwargs,
             ):
@@ -491,6 +492,12 @@ def mmap(   cb,
                 #wait(timeout, verbose & 2)
     if log and stot:
         log.finish(dest.count(), multi)
+    if delete_temp_collections:
+        if incremental:
+            print ("WARNING: --incremental is not compatible with --delete_temp_collections so not deleting")
+        else:
+            housekeep.drop_collection()
+            qmmap_log.drop_collection()
     return dbd[dest_col]
 
 def toMongoEngine(pmobj, metype):
