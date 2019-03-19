@@ -450,7 +450,7 @@ def mmap(   cb,
 #
         if not ignore_job:
             query['qmmap_job'] = job
-            print("query modified for job:", query)
+        print("query modified for job:", query)
         if manage_only:
             manage(timeout, sleep)
         elif not process_only:
