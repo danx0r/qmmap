@@ -394,7 +394,8 @@ def mmap(   cb,
             log=False, #True (create log), or instance of qmmap_log
             incremental=False,
             delete_temp_collections=False,
-            job=None
+            job=None,
+            ignore_job=False,
             # **kwargs,
             ):
 
@@ -447,8 +448,9 @@ def mmap(   cb,
 # we process everything without a job the old way
 # IOW, backwards compatibility FTW
 #
-        query['qmmap_job'] = job
-        print("query modified for job:", query)
+        if not ignore_job:
+            query['qmmap_job'] = job
+            print("query modified for job:", query)
         if manage_only:
             manage(timeout, sleep)
         elif not process_only:
