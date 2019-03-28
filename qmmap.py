@@ -81,7 +81,7 @@ def _connect(srccol, destcol, dest_uri=None, job=None):
 
 def _init(srccol, destcol, key, query, chunk_size, verbose):
     housekeep.drop_collection()
-    q = srccol.find(query, [key]).sort([(key, pymongo.ASCENDING)])
+    q = srccol.find(query, [key])#.sort([(key, pymongo.ASCENDING)]) ### sort sorta stopped working :/
     cnt = q.count()
     if cnt==0:
         print ("Zero rows to process: exiting")
