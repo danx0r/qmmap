@@ -96,6 +96,7 @@ def _init(srccol, destcol, key, query, chunk_size, verbose):
     t0 = time.time()
     while tot > 0:
         if verbose & 2: print("housekeeping: %d time: %f" % (i, time.time()-t0))
+        t0 = time.time()
         i +=1
         sys.stdout.flush()
         hk = housekeep()
