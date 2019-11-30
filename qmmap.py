@@ -92,13 +92,15 @@ def _init(srccol, destcol, key, query, chunk_size, verbose):
     if verbose & 2: print("initializing %d entries, housekeeping for %s" % (cnt, housekeep._get_collection_name()))
     i = 0
     gtotal=0
-    tot = min(chunk_size, cnt - gtotal)
+    tot = min(chunk_size, cnt)
     t0 = time.time()
     while tot > 0:
-        if verbose & 2: print("housekeeping: %d time: %f" % (i, time.time()-t0))
-        t0 = time.time()
+        if verbose & 2:
+            t = time.time()-t0
+            est = t * cnt / chunk_size
+            print("housekeeping: %d time: %f est total time for housekeeping: %f seconds (%f hours)" % (i, t, est, est/3600))
+            t0 = time.time()
         i +=1
-        sys.stdout.flush()
         hk = housekeep()
         hk.start = q[gtotal][key]
         hk.end =  q[gtotal + min(chunk_size-1, tot-1)][key]
