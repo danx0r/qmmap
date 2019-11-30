@@ -58,8 +58,11 @@ class qmmap_log(meng.DynamicDocument):
         self.finished = datetime.datetime.utcnow()
         if multi:
             tot = 0
-            for x in housekeep.objects:
-                tot += x.good
+            try:
+                for x in housekeep.objects:
+                    tot += x.good
+            except RuntimeError:
+                pass
             self.records_processed = tot
             self.chunks_allocated = housekeep.objects.count()
             self.chunks_processed = housekeep.objects(state='done').count()
@@ -618,7 +621,12 @@ def manage(timeout, sleep=120):
         # on longer than the timeout param
         tnow = datetime.datetime.utcnow()  # get time once instead of repeating
         # Iterate through working objects to see if it's too long
-        hkwquery = [h for h in housekeep.objects(state='working').all()]
+        hkwquery = []
+        try:
+            for h in housekeep.objects(state='working').all():
+                hkwquery.append(h)
+        except RuntimeError:
+            pass
         for hkw in hkwquery:
             # .tstart must have time value for state to equal 'working' at all
             time_taken = (tnow - hkw.tstart).total_seconds()

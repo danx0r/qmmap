@@ -93,8 +93,11 @@ if __name__ == "__main__":
     print("time processing:", time.time() - t, "seconds")
     print("representative output:")
 #     print list(db.qmmap_dest.find())
-    for o in qmmap_dest.objects.limit(3):
-        print(o.s[:20])
+    try:
+        for o in qmmap_dest.objects.limit(3):
+            print(o.s[:20])
+    except RuntimeError:
+        pass
     print()
 
     #inspect housekeeping collection for fun & profit

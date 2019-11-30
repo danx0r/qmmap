@@ -42,5 +42,8 @@ for i in range(10):
 
 ret = mmap(func, "qmmap_in", "qmmap_out", multi=2, sleep=2, reset=True,  init=init)
 
-for o in qmmap_out.objects:
-    print(o.val, o.comp)
+try:
+    for o in qmmap_out.objects:
+        print(o.val, o.comp)
+except RuntimeError:
+    pass

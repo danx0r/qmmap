@@ -11,7 +11,8 @@ import pymongo
 from qmmap import toMongoEngine, connectMongoEngine, mmap
 
 
-connect("test")
+con=connect("test")
+connectMongoEngine(con)
 
 class qmmap_in(Document):
     num = IntField(primary_key = True)
@@ -28,7 +29,10 @@ db = pymongo.MongoClient().test
 for i in range(10):
     db.qmmap_in.save({'_id': i})
 
-ret = mmap(func, "qmmap_in", "qmmap_out")
+ret = mmap(func, "qmmap_in", "qmmap_out", reset=True)
 
-for o in qmmap_out.objects:
-    print(o.val, end=' ')
+try:
+    for o in qmmap_out.objects:
+        print(o.val, end=' ')
+except RuntimeError:
+    pass

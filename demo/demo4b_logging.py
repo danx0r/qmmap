@@ -37,7 +37,10 @@ for i in range(10):
 
 ret = mmap(func, "qmmap_in", "qmmap_out", multi=2, sleep=2, reset=True, init=init, log=True)
 
-for o in qmmap_out.objects:
-    print((o.val, o.comp))
+try:
+    for o in qmmap_out.objects:
+        print((o.val, o.comp))
+except RuntimeError:
+    pass
 
 pp(qmmap_log.objects.order_by("-finish")[0].to_mongo())
