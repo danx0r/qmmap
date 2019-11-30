@@ -112,8 +112,9 @@ def _init(srccol, destcol, key, query, chunk_size, verbose):
             if verbose & 2: print("ERROR: key field has None. start: %s end: %s" % (hk.start, hk.end), file=sys.stderr)
             raise Exception("key error")
         #calc total for this segment
-        qq = {'$and': [query, {key: {'$gte': hk.start}}, {key: {'$lte': hk.end}}]}
-        hk.total = srccol.find(qq, [key]).count()
+        # qq = {'$and': [query, {key: {'$gte': hk.start}}, {key: {'$lte': hk.end}}]}
+        # hk.total = srccol.find(qq, [key]).count()
+        hk.total = min(chunk_size, cnt-gtotal)
         gtotal+=hk.total
         hk.save()
 
@@ -121,7 +122,7 @@ def _init(srccol, destcol, key, query, chunk_size, verbose):
         qq = {'$and': [query, {key: {'$gt': hk.end}}]}
         q = srccol.find(qq, [key]).sort([(key, pymongo.ASCENDING)])
         #limit count to chunk for speed
-        tot = q.limit(chunk_size).count(with_limit_and_skip=True)
+        tot = min(chunk_size, cnt-gtotal)
     return gtotal
 
 
