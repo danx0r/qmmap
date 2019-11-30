@@ -90,38 +90,23 @@ def _init(srccol, destcol, key, query, chunk_size, verbose):
         print ("Zero rows to process: exiting")
         return 0
     if verbose & 2: print("initializing %d entries, housekeeping for %s" % (cnt, housekeep._get_collection_name()))
-#     else:
-#         raise Exception("no incremental yet")
-# #         last = housekeep.objects().order_by('-start')[0].end
-# #         if verbose & 2: print "last partition field in housekeep:", last
-# #         query[key + "__gt"] = last
-# #         q = srccol.objects(**query).only(key).order_by(key)
-# #         if verbose & 2: print "added %d entries to %s" % (q.count(), housekeep._get_collection_name())
-# #         sys.stdout.flush()
     i = 0
     gtotal=0
-    tot = q.limit(chunk_size).count(with_limit_and_skip=True)
+    tot = min(chunk_size, cnt - gtotal)
+    t0 = time.time()
     while tot > 0:
-        if verbose & 2: print("housekeeping: %d" % i)
+        if verbose & 2: print("housekeeping: %d time: %f" % (i, time.time()-t0))
         i +=1
         sys.stdout.flush()
         hk = housekeep()
-        hk.start = q[0][key]
-        hk.end =  q[min(chunk_size-1, tot-1)][key]
+        hk.start = q[gtotal][key]
+        hk.end =  q[gtotal + min(chunk_size-1, tot-1)][key]
         if (hk.start == None or hk.end == None):
             if verbose & 2: print("ERROR: key field has None. start: %s end: %s" % (hk.start, hk.end), file=sys.stderr)
             raise Exception("key error")
-        #calc total for this segment
-        # qq = {'$and': [query, {key: {'$gte': hk.start}}, {key: {'$lte': hk.end}}]}
-        # hk.total = srccol.find(qq, [key]).count()
         hk.total = min(chunk_size, cnt-gtotal)
         gtotal+=hk.total
         hk.save()
-
-        #get start of next segment
-        qq = {'$and': [query, {key: {'$gt': hk.end}}]}
-        q = srccol.find(qq, [key]).sort([(key, pymongo.ASCENDING)])
-        #limit count to chunk for speed
         tot = min(chunk_size, cnt-gtotal)
     return gtotal
 
