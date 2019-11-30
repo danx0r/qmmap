@@ -2,7 +2,7 @@ import os, sys, time, random, argparse
 import mongoengine as meng
 import qmmap
 from bson import ObjectId
-
+random.seed(12346)
 class qmmap_src(meng.Document):
     s1 = meng.StringField()
     s2 = meng.StringField()
