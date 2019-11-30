@@ -84,6 +84,8 @@ def _connect(srccol, destcol, dest_uri=None, job=None):
 
 def _init(srccol, destcol, key, query, chunk_size, verbose):
     housekeep.drop_collection()
+
+    if verbose & 2: print("housekeeping query: %s" % query)
     q = srccol.find(query, [key]).sort([(key, pymongo.ASCENDING)]) ### sort sorta stopped working :/
     cnt = q.count()
     if cnt==0:
@@ -103,14 +105,18 @@ def _init(srccol, destcol, key, query, chunk_size, verbose):
         i +=1
         hk = housekeep()
         hk.start = q[gtotal][key]
+        if verbose & 2: print("  start:", hk.start)
         hk.end =  q[gtotal + min(chunk_size-1, tot-1)][key]
+        if verbose & 2: print("  end:", hk.end)
         if (hk.start == None or hk.end == None):
             if verbose & 2: print("ERROR: key field has None. start: %s end: %s" % (hk.start, hk.end), file=sys.stderr)
             raise Exception("key error")
         hk.total = min(chunk_size, cnt-gtotal)
+        if verbose & 2: print("  total:", hk.total)
         gtotal+=hk.total
         hk.save()
         tot = min(chunk_size, cnt-gtotal)
+        if verbose & 2: sys.stdout.flush()
     return gtotal
 
 
