@@ -94,29 +94,47 @@ def _init(srccol, destcol, key, query, chunk_size, verbose):
     if verbose & 2: print("initializing %d entries, housekeeping for %s" % (cnt, housekeep._get_collection_name()))
     i = 0
     gtotal=0
-    tot = min(chunk_size, cnt)
-    t0 = time.time()
-    while tot > 0:
-        if verbose & 2:
-            t = time.time()-t0
-            est = t * cnt / chunk_size
-            print("housekeeping: %d time: %f est total time for housekeeping: %f seconds (%f hours)" % (i, t, est, est/3600))
-            t0 = time.time()
-        i +=1
+    # tot = min(chunk_size, cnt)
+    # t0 = time.time()
+    # while tot > 0:
+    #     if verbose & 2:
+    #         t = time.time()-t0
+    #         est = t * cnt / chunk_size
+    #         print("housekeeping: %d time: %f est total time for housekeeping: %f seconds (%f hours)" % (i, t, est, est/3600))
+    #         t0 = time.time()
+    #     i +=1
+    #     hk = housekeep()
+    #     hk.start = q[gtotal][key]
+    #     if verbose & 2: print("  start:", hk.start)
+    #     hk.end =  q[gtotal + min(chunk_size-1, tot-1)][key]
+    #     if verbose & 2: print("  end:", hk.end)
+    #     if (hk.start == None or hk.end == None):
+    #         if verbose & 2: print("ERROR: key field has None. start: %s end: %s" % (hk.start, hk.end), file=sys.stderr)
+    #         raise Exception("key error")
+    #     hk.total = min(chunk_size, cnt-gtotal)
+    #     if verbose & 2: print("  total:", hk.total)
+    #     gtotal+=hk.total
+    #     hk.save()
+    #     tot = min(chunk_size, cnt-gtotal)
+    #     if verbose & 2: sys.stdout.flush()
+    while True:
         hk = housekeep()
-        hk.start = q[gtotal][key]
-        if verbose & 2: print("  start:", hk.start)
-        hk.end =  q[gtotal + min(chunk_size-1, tot-1)][key]
-        if verbose & 2: print("  end:", hk.end)
-        if (hk.start == None or hk.end == None):
-            if verbose & 2: print("ERROR: key field has None. start: %s end: %s" % (hk.start, hk.end), file=sys.stderr)
-            raise Exception("key error")
-        hk.total = min(chunk_size, cnt-gtotal)
+        hk.total = min(chunk_size, cnt - gtotal)
         if verbose & 2: print("  total:", hk.total)
-        gtotal+=hk.total
+        if hk.total == 0:
+            break
+        hk.start = q.next()[key]
+        if verbose & 2: print("  start:", hk.start)
+        if hk.total==1:
+            hk.end = hk.start
+        else:
+            for n in range(hk.total-2):
+                nx = q.next()
+                if verbose & 4: print("  next:", nx[key])
+            hk.end = q.next()[key]
+        if verbose & 2: print("  end:", hk.end)
         hk.save()
-        tot = min(chunk_size, cnt-gtotal)
-        if verbose & 2: sys.stdout.flush()
+        gtotal += hk.total
     return gtotal
 
 
