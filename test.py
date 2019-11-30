@@ -1,6 +1,7 @@
 import os, sys, time, random, argparse
 import mongoengine as meng
 import qmmap
+from bson import ObjectId
 
 class qmmap_src(meng.Document):
     s1 = meng.StringField()
@@ -39,6 +40,7 @@ def make_random_input(num, size, job=None):
         if job:
             if random.random() >= .5:
                 src.qmmap_job = job
+        src.id = ObjectId(hex(random.randint(0, 2**96))[2:].zfill(24))
         src.save()
 
 
